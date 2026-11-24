@@ -534,35 +534,70 @@
   /* ---------- add / edit area dialog ---------- */
   var dlg = el("areaDialog"), picker = el("tilePicker"), editing = null, pickedTile = null;
 
+  /* The library, grouped by brand. Search matches brand, name, material and colour names. */
   function buildPicker() {
     picker.innerHTML = "";
+    var groups = {};
     Object.keys(TV.TILES).forEach(function (id) {
-      var t = TV.TILES[id];
+      var t = TV.TILES[id], brand = t.brand || "Other";
+      if (!groups[brand]) {
+        var sec = make("section", "tile-group");
+        sec.appendChild(make("h3", null, brand));
+        var grid = make("div", "tile-picker");
+        sec.appendChild(grid);
+        picker.appendChild(sec);
+        groups[brand] = grid;
+      }
       var b = make("button", "tile-opt");
       b.type = "button";
       b.dataset.id = id;
+      b.dataset.search = [brand, t.name, t.material || "", t.credit || ""]
+        .concat(t.colors.map(function (c) { return c.name; })).join(" ").toLowerCase();
       var cvp = make("canvas");
       cvp.setAttribute("aria-hidden", "true");
       b.appendChild(cvp);
       var txt = make("span", "tile-txt");
-      txt.appendChild(make("b", null, tileName(t)));
+      txt.appendChild(make("b", null, t.name));
       txt.appendChild(make("span", null, sizeText(t) + " · " + t.colors.length + " colours"));
       b.appendChild(txt);
       b.addEventListener("click", function () { pickedTile = id; syncPicker(); });
-      picker.appendChild(b);
+      groups[brand].appendChild(b);
     });
+    filterPicker();
   }
+  function filterPicker() {
+    var words = el("tileSearch").value.toLowerCase().split(/\s+/).filter(Boolean), shown = 0;
+    Array.prototype.forEach.call(picker.querySelectorAll(".tile-group"), function (sec) {
+      var any = false;
+      Array.prototype.forEach.call(sec.querySelectorAll(".tile-opt"), function (b) {
+        var ok = words.every(function (w) { return b.dataset.search.indexOf(w) >= 0; });
+        b.hidden = !ok;
+        if (ok) { any = true; shown++; }
+      });
+      sec.hidden = !any;
+    });
+    var total = Object.keys(TV.TILES).length;
+    el("tileCount").textContent = words.length ? shown + " of " + total : total + " tiles";
+    el("tileNone").hidden = shown > 0;
+  }
+  el("tileSearch").addEventListener("input", function () { filterPicker(); drawPicker(); });
   function syncPicker() {
-    Array.prototype.forEach.call(picker.children, function (b) {
+    Array.prototype.forEach.call(picker.querySelectorAll(".tile-opt"), function (b) {
       b.setAttribute("aria-pressed", String(b.dataset.id === pickedTile));
     });
     el("dlgSave").disabled = !pickedTile;
   }
   function drawPicker() {
-    Array.prototype.forEach.call(picker.querySelectorAll("canvas"), function (c) {
+    Array.prototype.forEach.call(picker.querySelectorAll(".tile-opt:not([hidden]) canvas"), function (c) {
       var id = c.parentNode.dataset.id, t = TV.TILES[id];
       // Show the area's own options on its current tile, the tile's defaults elsewhere.
       var st = editing && editing.tile === id ? editing.st : optionsFor(t);
+      // Kinds drawn as a whole surface get a sample that fills the card, about six tiles wide.
+      if (kindOf(t).aspect) {
+        st = Object.assign({}, st);
+        st.w = Math.round(t.size.w * 6);
+        st.h = Math.round(st.w * c.clientHeight / Math.max(1, c.clientWidth));
+      }
       TV.draw(c, t, st);
     });
   }
@@ -576,6 +611,7 @@
     el("dlgSave").textContent = area ? "Save" : "Add area";
     el("dlgDelete").hidden = !area;
     el("dlgError").hidden = true;
+    el("tileSearch").value = "";
     buildPicker();
     syncPicker();
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
@@ -604,6 +640,9 @@
     showArea(area);
   });
   el("dlgCancel").addEventListener("click", closeDialog);
+  el("dlgClose").addEventListener("click", closeDialog);
+  // A click on the backdrop (outside the sheet) closes it.
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) closeDialog(); });
   el("dlgDelete").addEventListener("click", function () {
     if (!editing || !window.confirm("Delete “" + editing.name + "”?")) return;
     areas = areas.filter(function (a) { return a !== editing; });
