@@ -63,7 +63,7 @@ Each `<area>` is an encoded query:
 | `tile` | tile id from `TILES` |
 | `g` | grout hex, no `#` |
 | `j` | joint mm (1–8) |
-| `t`, `m`, `l`, `a`, `w` | mix: colour ids (comma-separated), `random`/`columns`/`rows`, `straight`/`drop`, `0`/`90`/`45`, wall width shown in cm (40–200) |
+| `t`, `m`, `l`, `a`, `w` | mix: colour ids (comma-separated), `random`/`columns`/`rows`/`alt`, `straight`/`drop`, `0`/`90`/`45`, wall width shown in cm (20–600, capped per tile) |
 | `c`, `p`, `s`, `w`, `h` | decor: colour id, `dash`/`dot`/`split-h`/`split-v`/`alt`, `1` swaps dash and dot, surface width cm (15–600), height cm (15–300) |
 
 Invalid values fall back to the tile's defaults; areas with an unknown tile are skipped. Links from the earlier fixed-places version (`#/foyer?…`, `#/?foyer=…&island-front=…`, `#foyer?…`) still open.
@@ -88,4 +88,4 @@ Actions minutes are free for public repositories. `.nojekyll` is already there.
 
 ### Caching
 
-GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=6`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**
+GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=7`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**
