@@ -22,18 +22,26 @@ Foyer (Bottone L), kitchen backsplash and island front (Homage to the Square):
 
 ## Tile library
 
-Tiles live in `js/data.js` under `TILES`. **A new tile is a data entry only**, as long as it uses an existing kind. The `plain-rectangle-7x15` entry is there to prove it: it reuses the `mix` kind with a plain outline.
+Brand tiles live in `js/tiles/<brand>.js` (so far `mutina.js`, 20 tiles); generic ones in `js/data.js`. All add themselves to `TILES`. **A new tile is a data entry only**, as long as it uses an existing kind. A new brand file also needs a `<script>` line in `index.html`.
+
+**A tile is one size of one product.** Colours, finishes or tones of the same size that are meant to be mixed on one surface share an entry (DIN's matt and glossy colours, Diarama's tone sets). Other sizes are separate tiles (Bottone S and Bottone L, the five Kosei sizes).
 
 | kind | example | options |
 | --- | --- | --- |
-| `mix` | Mutina Bottone L, Plain rectangle | several colours mixed, mix pattern, layout, direction, zoom |
+| `mix` | Bottone, DIN, Diarama, Kosei, Mews, Otto, Teknotessere, Time, Plain rectangle | several colours mixed, mix pattern, layout, direction, zoom |
 | `decor` | Mutina Homage to the Square | one colour; Dash/Dot pattern: all dash, all dot, split top/bottom, split left/right, alternate (with swap); surface width × height; tile counts |
 
 Optional tile fields:
 
+- `collection`: the brand's product family, e.g. "Osso & Bottone". A label only: shown on the tile, searched, and used to sort tiles within a brand.
 - `defaults`: starting options when an area picks the tile (including `grout` and `joint`).
 - `grouts`: grout colours suggested for this tile, `[{ name, c }]`. They show above the shared palette as "Suggested for this tile"; any colour can still be picked.
 - `shape` (mix): an outline from `js/shapes.js` (`rect`, `notched-strip`).
+- `tones` (mix, per colour): `[{ c, w }]` for products that vary tile by tile. Each tile gets one tone, in proportion to the weights `w`.
+
+The mix kind's zoom ("wall width shown") goes up to five tile lengths across, at least 2 m and at most 6 m.
+
+Mutina colours were sampled from the product photos on mutina.it: the median of the tile face, or the main colour clusters for products with tones. Glossy DIN colours are estimates, because those photos are mostly reflection.
 
 Decor surfaces are drawn whole, tiled from the top-left corner, so the split falls on a tile joint and the readout shows how many Dash and Dot tiles you need (and how many are cut).
 
@@ -55,14 +63,15 @@ Each `<area>` is an encoded query:
 | `tile` | tile id from `TILES` |
 | `g` | grout hex, no `#` |
 | `j` | joint mm (1–8) |
-| `t`, `m`, `l`, `a`, `w` | mix: colour ids (comma-separated), `random`/`columns`/`rows`, `straight`/`drop`, `0`/`90`/`45`, wall width shown in cm (40–200) |
+| `t`, `m`, `l`, `a`, `w` | mix: colour ids (comma-separated), `random`/`columns`/`rows`/`alt`, `straight`/`drop`, `0`/`90`/`45`, wall width shown in cm (20–600, capped per tile) |
 | `c`, `p`, `s`, `w`, `h` | decor: colour id, `dash`/`dot`/`split-h`/`split-v`/`alt`, `1` swaps dash and dot, surface width cm (15–600), height cm (15–300) |
 
 Invalid values fall back to the tile's defaults; areas with an unknown tile are skipped. Links from the earlier fixed-places version (`#/foyer?…`, `#/?foyer=…&island-front=…`, `#foyer?…`) still open.
 
 ## Files
 
-- `js/data.js`: grout palette and tile library
+- `js/data.js`: grout palette and generic tiles
+- `js/tiles/mutina.js`: Mutina tiles
 - `js/kinds.js`: per-kind options, controls and link keys
 - `js/render.js`: canvas drawing
 - `js/shapes.js`: tile outlines for the mix kind
@@ -79,4 +88,4 @@ Actions minutes are free for public repositories. `.nojekyll` is already there.
 
 ### Caching
 
-GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=5`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**
+GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=7`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**

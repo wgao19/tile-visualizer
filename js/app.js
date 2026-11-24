@@ -46,6 +46,15 @@
   }
   function kindOf(tile) { return TV.KINDS[tile.kind]; }
   function tileName(tile) { return (tile.brand && tile.brand !== "Generic" ? tile.brand + " " : "") + tile.name; }
+  /* Bands of a colour's tones, widths in proportion to their weights. */
+  function toneStripes(tones) {
+    var total = tones.reduce(function (a, t) { return a + (t.w || 1); }, 0), at = 0;
+    return "linear-gradient(90deg," + tones.map(function (t) {
+      var from = at / total * 100;
+      at += t.w || 1;
+      return t.c + " " + from.toFixed(1) + "% " + (at / total * 100).toFixed(1) + "%";
+    }).join(",") + ")";
+  }
   function sizeText(tile) { return tile.size.w + " × " + tile.size.l + " cm"; }
 
   /* ---------- areas ---------- */
@@ -314,7 +323,7 @@
     el("indexView").hidden = true;
     el("placeView").hidden = false;
     el("title").textContent = area.name;
-    el("subtitle").textContent = tileName(tile) + " · " + sizeText(tile) +
+    el("subtitle").textContent = tileName(tile) + (tile.collection && tile.name.indexOf(tile.collection) !== 0 ? " (" + tile.collection + ")" : "") + " · " + sizeText(tile) +
       (tile.credit ? " · " + tile.credit : "") + (tile.material ? ". " + tile.material + "." : "");
     el("productNote").textContent = tile.note || "";
     document.title = area.name + " · Tile Visualizer";
@@ -408,7 +417,7 @@
           swatchDraws.push(function () { c.swatch(swc, it); });
         } else {
           var dot = make("span", "dot");
-          dot.style.background = it.color;
+          dot.style.background = it.tones ? toneStripes(it.tones) : it.color;
           b.appendChild(dot);
         }
         b.appendChild(make("span", "nm", it.name));
@@ -538,7 +547,20 @@
   function buildPicker() {
     picker.innerHTML = "";
     var groups = {};
-    Object.keys(TV.TILES).forEach(function (id) {
+    // Brands in library order (Generic last); within a brand, by collection, then as listed.
+    var keys = Object.keys(TV.TILES), pos = {};
+    keys.forEach(function (id, k) { pos[id] = k; });
+    var brandPos = {};
+    keys.forEach(function (id) { var b = TV.TILES[id].brand || "Other"; if (!(b in brandPos)) brandPos[b] = pos[id]; });
+    brandPos.Generic = Infinity; // unbranded tiles last
+    keys.sort(function (a, b) {
+      var ta = TV.TILES[a], tb = TV.TILES[b];
+      var d = brandPos[ta.brand || "Other"] - brandPos[tb.brand || "Other"];
+      if (d) return d;
+      var ca = (ta.collection || ta.name).toLowerCase(), cb = (tb.collection || tb.name).toLowerCase();
+      return ca < cb ? -1 : ca > cb ? 1 : pos[a] - pos[b];
+    });
+    keys.forEach(function (id) {
       var t = TV.TILES[id], brand = t.brand || "Other";
       if (!groups[brand]) {
         var sec = make("section", "tile-group");
@@ -551,13 +573,14 @@
       var b = make("button", "tile-opt");
       b.type = "button";
       b.dataset.id = id;
-      b.dataset.search = [brand, t.name, t.material || "", t.credit || ""]
+      b.dataset.search = [brand, t.collection || "", t.name, t.material || "", t.credit || ""]
         .concat(t.colors.map(function (c) { return c.name; })).join(" ").toLowerCase();
       var cvp = make("canvas");
       cvp.setAttribute("aria-hidden", "true");
       b.appendChild(cvp);
       var txt = make("span", "tile-txt");
       txt.appendChild(make("b", null, t.name));
+      if (t.collection && t.name.indexOf(t.collection) !== 0) txt.appendChild(make("span", null, t.collection));
       txt.appendChild(make("span", null, sizeText(t) + " · " + t.colors.length + " colours"));
       b.appendChild(txt);
       b.addEventListener("click", function () { pickedTile = id; syncPicker(); });
