@@ -63,3 +63,5 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 #tileSw .dot { height: 36px; }
 .note { margin: 0; font-size: 0.8rem; color: var(--muted); }
 [hidden] { display: none !important; }
+.readout { align-items: center; }
+.readout .share { margin-left: auto; color: var(--ink); font-weight: 600; min-width: 7.5em; }

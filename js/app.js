@@ -135,7 +135,93 @@
     el("customHex").textContent = state.grout;
   }
 
-  function render() { updateReadout(); draw(); }
+  function render() { updateReadout(); writeUrl(); draw(); }
+
+  /* ---------- URL serialisation ----------
+   * #<selection>?t=rosso,verde&m=random&g=cdbfa6&l=drop&a=0&j=3&w=90
+   * Every option is written so a shared link stays stable even if defaults change.
+   */
+  function serialize() {
+    var p = [
+      "t=" + state.tiles.join(","),
+      "m=" + state.mix,
+      "g=" + state.grout.replace("#", "").toLowerCase(),
+      "l=" + state.layout,
+      "a=" + state.angle,
+      "j=" + state.joint,
+      "w=" + state.wall
+    ];
+    return selection.id + "?" + p.join("&");
+  }
+  function parseHash() {
+    var h = decodeURIComponent(location.hash.replace(/^#/, ""));
+    var q = h.indexOf("?");
+    var id = q < 0 ? h : h.slice(0, q);
+    var params = {};
+    if (q >= 0) h.slice(q + 1).split("&").forEach(function (kv) {
+      var k = kv.indexOf("=");
+      if (k > 0) params[kv.slice(0, k)] = kv.slice(k + 1);
+    });
+    return { id: id, params: params };
+  }
+  function shareUrl() {
+    return location.href.split("#")[0] + "#" + serialize();
+  }
+  function writeUrl() {
+    if (!selection || !history.replaceState) return;
+    var next = "#" + serialize();
+    if (location.hash !== next) history.replaceState(null, "", next);
+  }
+  function inRange(v, lo, hi) { return isFinite(v) && v >= lo && v <= hi; }
+  function applyParams(p, layouts) {
+    if (p.t) {
+      var t = p.t.split(",").filter(function (tid, i, arr) {
+        return arr.indexOf(tid) === i && product.colors.some(function (c) { return c.id === tid; });
+      });
+      if (t.length) state.tiles = t;
+    }
+    if (MIXES.some(function (m) { return m.id === p.m; })) state.mix = p.m;
+    if (/^[0-9a-f]{6}$/i.test(p.g || "")) {
+      state.grout = "#" + p.g.toLowerCase();
+      var named = TV.GROUTS.filter(function (gr) { return gr.c.toLowerCase() === state.grout; })[0];
+      state.groutName = named ? named.name : "Custom";
+    }
+    if (layouts.some(function (l) { return l.id === p.l; })) state.layout = p.l;
+    var a = parseFloat(p.a);
+    if (ANGLES.some(function (x) { return x.id === a; })) state.angle = a;
+    var j = parseFloat(p.j);
+    if (inRange(j, 1, 8)) state.joint = Math.round(j * 2) / 2;
+    var w = parseFloat(p.w);
+    if (inRange(w, 40, 200)) state.wall = Math.round(w / 5) * 5;
+  }
+
+  /* ---------- share ---------- */
+  var shareTimer;
+  function flashShare(msg) {
+    var b = el("share");
+    b.textContent = msg;
+    clearTimeout(shareTimer);
+    shareTimer = setTimeout(function () { b.textContent = "Share"; }, 1800);
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy") ? resolve() : reject(); } catch (e) { reject(e); }
+      document.body.removeChild(ta);
+    });
+  }
+  el("share").addEventListener("click", function () {
+    var url = shareUrl();
+    if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+      navigator.share({ title: document.title, url: url }).catch(function () {});
+      return;
+    }
+    copyText(url).then(function () { flashShare("Link copied"); },
+      function () { window.prompt("Copy this link:", url); });
+  });
 
   /* ---------- controls ---------- */
   function seg(id, items, key, onPick) {
@@ -226,7 +312,7 @@
   /* ---------- selections ---------- */
   var syncSelection;
 
-  function applySelection(id) {
+  function applySelection(id, params) {
     selection = TV.SELECTIONS.filter(function (s) { return s.id === id; })[0] || TV.SELECTIONS[0];
     product = TV.PRODUCTS[selection.product];
 
@@ -238,6 +324,7 @@
 
     var layouts = (product.layouts || ["straight"]).map(function (k) { return ALL_LAYOUTS[k]; }).filter(Boolean);
     if (!layouts.some(function (l) { return l.id === state.layout; })) state.layout = layouts[0].id;
+    if (params) applyParams(params, layouts);
 
     el("title").textContent = selection.name + " · " + product.brand + " " + product.name;
     el("subtitle").textContent = [product.name + (product.credit ? ", " + product.credit : ""), product.material]
@@ -259,16 +346,19 @@
     render();
   }
 
-  syncSelection = seg("selectionSeg", TV.SELECTIONS, null, function (it) {
-    if (location.hash.slice(1) !== it.id) location.hash = it.id;
-    else applySelection(it.id);
-  });
-  window.addEventListener("hashchange", function () { applySelection(location.hash.slice(1)); });
+  function applyFromHash() {
+    var h = parseHash();
+    applySelection(h.id, h.params);
+  }
+  // Switching selection starts from that selection's defaults.
+  syncSelection = seg("selectionSeg", TV.SELECTIONS, null, function (it) { applySelection(it.id); });
+  // Pasting / editing a link in the address bar re-applies it.
+  window.addEventListener("hashchange", applyFromHash);
 
   var raf;
   function scheduleDraw() { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }
   window.addEventListener("resize", scheduleDraw);
   if (window.ResizeObserver) new ResizeObserver(scheduleDraw).observe(cv);
 
-  applySelection(location.hash.slice(1));
+  applyFromHash();
 })();
