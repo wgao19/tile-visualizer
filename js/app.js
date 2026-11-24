@@ -1,496 +1,617 @@
+/*
+ * Areas, routing, controls and sharing.
+ *
+ * A set is a list of areas. Each area has a name, a tile from the library and
+ * that tile's options. The link holds the whole set, so it is the only state
+ * that matters: a link with no areas opens an empty set. The last set you edited
+ * is also kept in this browser so you can pick it up again.
+ *
+ *   #/?a=<area>&a=<area>         overview of the set
+ *   #/<area id>?a=<area>&…       one area, with the rest of the set
+ *   <area> = encoded "n=<name>&tile=<tile id>&g=<grout>&j=<joint>&<kind options>"
+ *
+ * Older links (#/foyer?…, #/?foyer=…&island-front=…, #foyer?…) still open.
+ */
 (function () {
-  var TV = window.TileViz;
+  var TV = window.TileViz, U = TV.util;
+  var AREA_BASE = { grout: "#cdbfa6", joint: 3 };
+  var STORE_LAST = "tileviz:last";
 
-  /* ---------- option lists ---------- */
-  var LAYOUTS = { straight: { id: "straight", name: "Straight" }, drop: { id: "drop", name: "Half drop" } };
-  var ANGLES = [{ id: 0, name: "Vertical" }, { id: 90, name: "Horizontal" }, { id: 45, name: "Diagonal" }];
-  var MIXES = [{ id: "random", name: "Random" }, { id: "columns", name: "By strip" }, { id: "rows", name: "By row" }];
-  var PATTERNS = [
-    { id: "dash", name: "All dash" },
-    { id: "dot", name: "All dot" },
-    { id: "split-h", name: "Top / bottom" },
-    { id: "split-v", name: "Left / right" },
-    { id: "alt", name: "Alternate" }
-  ];
-
-  /* ---------- small helpers ---------- */
+  /* ---------- helpers ---------- */
   function el(id) { return document.getElementById(id); }
-  function assign(t) {
-    for (var k = 1; k < arguments.length; k++) {
-      var s = arguments[k];
-      if (s) for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = Array.isArray(s[p]) ? s[p].slice() : s[p];
-    }
-    return t;
+  function make(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
   }
-  function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
-  function inRange(v, lo, hi) { return isFinite(v) && v >= lo && v <= hi; }
-  function groutName(hex) {
-    var g = TV.GROUTS.filter(function (x) { return x.c.toLowerCase() === hex.toLowerCase(); })[0];
-    return g ? g.name : "Custom";
-  }
-  function productOf(place) { return TV.PRODUCTS[place.product]; }
-  function layoutsFor(product) {
-    return (product.layouts || ["straight"]).map(function (k) { return LAYOUTS[k]; }).filter(Boolean);
-  }
-  function parseQuery(q) {
-    var out = {};
+  function copy(v) { return Array.isArray(v) ? v.slice() : v; }
+  function pairs(q) {
+    var out = [];
     (q || "").split("&").forEach(function (kv) {
       var k = kv.indexOf("=");
       if (k > 0) {
-        try { out[decodeURIComponent(kv.slice(0, k))] = decodeURIComponent(kv.slice(k + 1)); } catch (e) { /* skip bad pair */ }
+        try { out.push([decodeURIComponent(kv.slice(0, k)), decodeURIComponent(kv.slice(k + 1))]); } catch (e) { /* skip */ }
       }
     });
     return out;
   }
-  function toQuery(pairs) {
-    return pairs.map(function (p) { return p[0] + "=" + encodeURIComponent(p[1]); }).join("&");
+  function parseQuery(q) {
+    var o = {};
+    pairs(q).forEach(function (p) { o[p[0]] = p[1]; });
+    return o;
   }
-  function parseGrout(p, st) {
-    if (/^[0-9a-f]{6}$/i.test(p.g || "")) st.grout = "#" + p.g.toLowerCase();
+  function toQuery(list) {
+    return list.map(function (p) { return encodeURIComponent(p[0]) + "=" + encodeURIComponent(p[1]); }).join("&");
   }
-  function parseJoint(p, st) {
+  function kindOf(tile) { return TV.KINDS[tile.kind]; }
+  function tileName(tile) { return (tile.brand && tile.brand !== "Generic" ? tile.brand + " " : "") + tile.name; }
+  function sizeText(tile) { return tile.size.w + " × " + tile.size.l + " cm"; }
+
+  /* ---------- areas ---------- */
+
+  /* Options for `tile`, starting from its defaults and keeping whatever in `carry`
+   * still applies (grout and joint always; kind options when the kind matches). */
+  function optionsFor(tile, carry) {
+    var k = kindOf(tile), st = {}, key;
+    for (key in AREA_BASE) st[key] = AREA_BASE[key];
+    for (key in k.base) st[key] = copy(k.base[key]);
+    for (key in tile.defaults || {}) st[key] = copy(tile.defaults[key]);
+    if (carry) for (key in carry) if (key in AREA_BASE || key in k.base) st[key] = copy(carry[key]);
+    normalize(tile, st);
+    return st;
+  }
+  function normalize(tile, st) {
+    if (!/^#[0-9a-f]{6}$/i.test(st.grout || "")) st.grout = AREA_BASE.grout;
+    st.grout = st.grout.toLowerCase();
+    if (!U.inRange(st.joint, 1, 8)) st.joint = AREA_BASE.joint;
+    kindOf(tile).normalize(tile, st);
+  }
+
+  function slug(name) {
+    var s = String(name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "");
+    return s || "area";
+  }
+  function uniqueId(name, self) {
+    var base = slug(name), id = base, n = 2;
+    while (areas.some(function (a) { return a !== self && a.id === id; }) || id === "new") id = base + "-" + n++;
+    return id;
+  }
+
+  function encodeArea(a) {
+    return toQuery([["n", a.name], ["tile", a.tile], ["g", a.st.grout.slice(1)], ["j", a.st.joint]]
+      .concat(kindOf(TV.TILES[a.tile]).serialize(a.st)));
+  }
+  /* An area from link params, or null if its tile isn't in the library. */
+  function areaFrom(p, fallbackName) {
+    var tile = TV.TILES[p.tile];
+    if (!tile) return null;
+    var st = optionsFor(tile);
+    if (/^[0-9a-f]{6}$/i.test(p.g || "")) st.grout = "#" + p.g;
     var j = parseFloat(p.j);
-    if (inRange(j, 1, 8)) st.joint = Math.round(j * 2) / 2;
+    if (U.inRange(j, 1, 8)) st.joint = Math.round(j * 2) / 2;
+    kindOf(tile).parse(p, tile, st);
+    normalize(tile, st);
+    return { name: (p.n || fallbackName || tile.name).slice(0, 60), tile: p.tile, st: st };
+  }
+  function setQuery(list) {
+    return (list || areas).map(function (a) { return "a=" + encodeURIComponent(encodeArea(a)); }).join("&");
+  }
+  function setFromQuery(q) {
+    var out = [];
+    pairs(q).forEach(function (p) {
+      if (p[0] !== "a") return;
+      var a = areaFrom(parseQuery(p[1]));
+      if (a) out.push(a);
+    });
+    return out;
+  }
+  function assignIds(list) {
+    var saved = areas;
+    areas = [];
+    list.forEach(function (a) { a.id = uniqueId(a.name); areas.push(a); });
+    areas = saved;
+    return list;
   }
 
-  /* ---------- per-kind behaviour ----------
-   * base:      fallback defaults for anything a place doesn't set
-   * normalize: make a state valid for its product
-   * serialize: [key, value] pairs written to the URL
-   * parse:     apply URL params on top of a state (invalid values are ignored)
-   * facts:     [label, value, chip colour?] rows for the readout and overview cards
-   */
-  var KINDS = {
-    strip: {
-      base: { tiles: [], mix: "random", grout: "#cdbfa6", layout: "straight", angle: 0, joint: 3, wall: 90 },
-      normalize: function (product, st) {
-        st.tiles = st.tiles.filter(function (id, i, a) { return a.indexOf(id) === i && byId(product.colors, id); });
-        if (!st.tiles.length) st.tiles = [product.colors[0].id];
-        var ls = layoutsFor(product);
-        if (!byId(ls, st.layout)) st.layout = ls[0].id;
-      },
-      serialize: function (st) {
-        return [["t", st.tiles.join(",")], ["m", st.mix], ["g", st.grout.slice(1)], ["l", st.layout],
-          ["a", st.angle], ["j", st.joint], ["w", st.wall]];
-      },
-      parse: function (p, product, st) {
-        if (p.t) st.tiles = p.t.split(",");
-        if (byId(MIXES, p.m)) st.mix = p.m;
-        parseGrout(p, st);
-        if (p.l) st.layout = p.l;
-        var a = parseFloat(p.a);
-        if (byId(ANGLES, a)) st.angle = a;
-        parseJoint(p, st);
-        var w = parseFloat(p.w);
-        if (inRange(w, 40, 200)) st.wall = Math.round(w / 5) * 5;
-      },
-      facts: function (product, st) {
-        var f = [
-          ["Tile", product.colors.filter(function (t) { return st.tiles.indexOf(t.id) >= 0; }).map(function (t) { return t.name; }).join(", ")]
-        ];
-        if (st.tiles.length > 1) f.push(["Mix", byId(MIXES, st.mix).name]);
-        f.push(["Layout", LAYOUTS[st.layout].name + ", " + byId(ANGLES, st.angle).name.toLowerCase()]);
-        f.push(["Grout", groutName(st.grout) + " " + st.grout.toUpperCase(), st.grout]);
-        f.push(["Joint", st.joint + " mm"]);
-        return f;
-      }
-    },
-
-    decor: {
-      base: { color: null, pattern: "dash", swap: false, grout: "#f2efe9", joint: 2, w: 240, h: 60 },
-      normalize: function (product, st) {
-        if (!byId(product.colors, st.color)) st.color = product.colors[0].id;
-        if (!byId(PATTERNS, st.pattern)) st.pattern = "dash";
-        st.swap = !!st.swap;
-      },
-      serialize: function (st) {
-        return [["c", st.color], ["p", st.pattern], ["s", st.swap ? 1 : 0], ["g", st.grout.slice(1)],
-          ["j", st.joint], ["w", st.w], ["h", st.h]];
-      },
-      parse: function (p, product, st) {
-        if (p.c) st.color = p.c;
-        if (p.p) st.pattern = p.p;
-        if (p.s === "1" || p.s === "0") st.swap = p.s === "1";
-        parseGrout(p, st);
-        parseJoint(p, st);
-        var w = parseFloat(p.w), h = parseFloat(p.h);
-        if (inRange(w, 15, 600)) st.w = Math.round(w);
-        if (inRange(h, 15, 300)) st.h = Math.round(h);
-      },
-      facts: function (product, st) {
-        var L = TV.decorLayout(product, st);
-        var pat = byId(PATTERNS, st.pattern).name;
-        if (st.pattern === "split-h") pat = "Top " + (st.swap ? "dot" : "dash") + ", bottom " + (st.swap ? "dash" : "dot");
-        if (st.pattern === "split-v") pat = "Left " + (st.swap ? "dot" : "dash") + ", right " + (st.swap ? "dash" : "dot");
-        if (st.pattern === "alt") pat = "Alternate, starting " + (st.swap ? "dot" : "dash");
-        var mix = [];
-        if (L.counts.dash) mix.push(L.counts.dash + " dash");
-        if (L.counts.dot) mix.push(L.counts.dot + " dot");
-        return [
-          ["Colour", byId(product.colors, st.color).name],
-          ["Pattern", pat],
-          ["Grout", groutName(st.grout) + " " + st.grout.toUpperCase(), st.grout],
-          ["Joint", st.joint + " mm"],
-          ["Surface", st.w + " × " + st.h + " cm"],
-          ["Tiles", L.total + " (" + mix.join(", ") + (L.cut ? "; " + L.cut + " cut" : "") + ")"]
-        ];
-      }
-    }
+  /* ---------- older links ---------- */
+  var LEGACY = {
+    "foyer": { name: "Foyer", tile: "mutina-bottone-l" },
+    "kitchen-backsplash": { name: "Kitchen backsplash", tile: "mutina-homage-to-the-square" },
+    "island-front": { name: "Island front", tile: "mutina-homage-to-the-square" }
   };
-
-  /* ---------- state per place ---------- */
-  var STORE = "tileviz:";
-  var states = {};
-
-  function kindOf(place) { return KINDS[productOf(place).kind]; }
-  function defaultsFor(place) {
-    var k = kindOf(place), st = assign({}, k.base, place.defaults);
-    k.normalize(productOf(place), st);
-    return st;
+  function legacyArea(id, q) {
+    var p = parseQuery(q);
+    p.tile = LEGACY[id].tile;
+    p.n = LEGACY[id].name;
+    return areaFrom(p);
   }
-  function stateFromQuery(place, q) {
-    var k = kindOf(place), st = defaultsFor(place);
-    k.parse(parseQuery(q), productOf(place), st);
-    k.normalize(productOf(place), st);
-    return st;
+  /* Old overview links carried one query per place. */
+  function legacySet(q) {
+    var p = parseQuery(q), out = [];
+    Object.keys(LEGACY).forEach(function (id) { if (p[id]) out.push(legacyArea(id, p[id])); });
+    return out.filter(Boolean);
   }
-  function serialize(place, st) { return toQuery(kindOf(place).serialize(st)); }
-  function getState(place) {
-    if (!states[place.id]) {
-      var saved = null;
-      try { saved = localStorage.getItem(STORE + place.id); } catch (e) { /* storage unavailable */ }
-      states[place.id] = saved ? stateFromQuery(place, saved) : defaultsFor(place);
-    }
-    return states[place.id];
-  }
-  function saveState(place) {
-    try { localStorage.setItem(STORE + place.id, serialize(place, states[place.id])); } catch (e) { /* ignore */ }
+  /* Picks saved by the old version of the page, offered as a set to resume. */
+  function legacyStored() {
+    var out = [];
+    try {
+      Object.keys(LEGACY).forEach(function (id) {
+        var q = localStorage.getItem("tileviz:" + id);
+        if (q) out.push(legacyArea(id, q));
+      });
+    } catch (e) { /* storage unavailable */ }
+    return out.filter(Boolean);
   }
 
-  /* ---------- routing ----------
-   *   #/                         overview (current picks)
-   *   #/?foyer=<enc>&island-front=<enc>   overview of shared picks
-   *   #/<place>?<options>        one place
-   *   #<place>?<options>         older links, still accepted
-   */
+  /* ---------- state and routing ---------- */
+  var areas = [];
+  var current = null; // area being edited, or null on the overview
+  var booted = false;
+
   function parseRoute() {
     var h = location.hash.replace(/^#\/?/, "");
     var q = h.indexOf("?");
     return { path: q < 0 ? h : h.slice(0, q), query: q < 0 ? "" : h.slice(q + 1) };
   }
-  function placeHash(place, st) { return "#/" + place.id + "?" + serialize(place, st); }
-  function writeUrl(next) {
-    if (location.hash !== next && history.replaceState) history.replaceState(null, "", next);
+  function hashFor(area) {
+    var q = setQuery();
+    return "#/" + (area ? encodeURIComponent(area.id) : "") + (q ? "?" + q : "");
   }
-
-  var current = null;   // the place being edited, or null on the overview
-  var indexStates = {}; // what the overview is showing
+  function writeUrl() {
+    var next = hashFor(current);
+    if (location.hash !== next && history.replaceState) history.replaceState(null, "", next || location.pathname);
+  }
+  function remember() {
+    try {
+      if (areas.length) localStorage.setItem(STORE_LAST, setQuery());
+      else localStorage.removeItem(STORE_LAST);
+    } catch (e) { /* ignore */ }
+  }
+  function changed() { remember(); writeUrl(); syncTabs(); }
 
   function route() {
-    var r = parseRoute();
-    var place = byId(TV.PLACES, r.path);
-    if (place) {
-      if (r.query) { states[place.id] = stateFromQuery(place, r.query); saveState(place); }
-      showPlace(place);
-    } else {
-      showIndex(r.query ? parseQuery(r.query) : null);
+    var r = parseRoute(), path = r.path;
+    try { path = decodeURIComponent(path); } catch (e) { /* keep raw */ }
+    // Old place links also used `a` (direction), so a set is only a set if its areas decode.
+    var set = setFromQuery(r.query);
+    if (set.length) {
+      areas = assignIds(set);
+    } else if (LEGACY[path] && r.query) {
+      areas = assignIds([legacyArea(path, r.query)].filter(Boolean));
+      path = areas.length ? areas[0].id : "";
+    } else if (!path && r.query && legacySet(r.query).length) {
+      areas = assignIds(legacySet(r.query));
+    } else if (!booted) {
+      areas = [];
     }
+    // Otherwise (a hash with no set, after load): keep the set already open.
+    booted = true;
+    buildTabs();
+    var area = U.byId(areas, path);
+    if (area) showArea(area); else showIndex();
+    remember();
   }
 
   /* ---------- tabs ---------- */
   var tabs = el("tabs");
   function buildTabs() {
-    var items = [{ id: "", name: "Overview" }].concat(TV.PLACES);
-    items.forEach(function (it) {
-      var a = document.createElement("a");
-      a.href = "#/" + it.id;
-      a.textContent = it.name;
-      a.dataset.id = it.id;
-      tabs.appendChild(a);
+    tabs.innerHTML = "";
+    [null].concat(areas).forEach(function (a) {
+      var link = make("a", null, a ? a.name : "Overview");
+      link.dataset.id = a ? a.id : "";
+      tabs.appendChild(link);
     });
+    var add = make("button", "tab-add", "+ Add area");
+    add.type = "button";
+    add.addEventListener("click", function () { openDialog(null); });
+    tabs.appendChild(add);
+    syncTabs();
   }
   function syncTabs() {
     var id = current ? current.id : "";
-    Array.prototype.forEach.call(tabs.children, function (a) {
-      if (a.dataset.id === id) a.setAttribute("aria-current", "page");
-      else a.removeAttribute("aria-current");
+    Array.prototype.forEach.call(tabs.querySelectorAll("a"), function (link) {
+      link.href = hashFor(U.byId(areas, link.dataset.id));
+      if (link.dataset.id === id) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
     });
   }
 
   /* ---------- overview ---------- */
   var cardsWrap = el("cards");
 
-  function showIndex(shared) {
+  function showIndex() {
     current = null;
-    TV.PLACES.forEach(function (p) {
-      indexStates[p.id] = shared && shared[p.id] ? stateFromQuery(p, shared[p.id]) : getState(p);
-    });
     el("indexView").hidden = false;
     el("placeView").hidden = true;
     document.title = "Tile Visualizer";
-    syncTabs();
+    el("shareIndex").hidden = !areas.length;
+    el("addArea").hidden = !areas.length;
+    el("indexSub").textContent = areas.length
+      ? "The current pick for each area. Open one to change it."
+      : "Add an area, such as a wall, floor or splashback, then pick a tile for it.";
+    buildEmpty();
     buildCards();
-    writeUrl("#/?" + TV.PLACES.map(function (p) {
-      return p.id + "=" + encodeURIComponent(serialize(p, indexStates[p.id]));
-    }).join("&"));
+    changed();
+  }
+
+  function buildEmpty() {
+    var box = el("empty");
+    box.hidden = areas.length > 0;
+    if (box.hidden) return;
+    var resume = el("resume");
+    var last = null;
+    try { last = localStorage.getItem(STORE_LAST); } catch (e) { /* ignore */ }
+    var set = last ? setFromQuery(last) : legacyStored();
+    resume.hidden = !set.length;
+    if (set.length) {
+      resume.textContent = "Open your last set (" + set.map(function (a) { return a.name; }).join(", ") + ")";
+      resume.onclick = function () { location.hash = "#/?" + setQuery(set); };
+    }
   }
 
   function buildCards() {
     cardsWrap.innerHTML = "";
-    TV.PLACES.forEach(function (place) {
-      var product = productOf(place), st = indexStates[place.id];
-      var a = document.createElement("a");
-      a.className = "card";
-      a.href = placeHash(place, st);
+    areas.forEach(function (area) {
+      var tile = TV.TILES[area.tile];
+      var a = make("a", "card");
+      a.href = hashFor(area);
 
-      var pv = document.createElement("div");
-      pv.className = "pv";
-      var cv = document.createElement("canvas");
+      var pv = make("div", "pv"), cv = make("canvas");
       cv.setAttribute("role", "img");
-      cv.setAttribute("aria-label", place.name + " preview");
+      cv.setAttribute("aria-label", area.name + " preview");
       pv.appendChild(cv);
       a.appendChild(pv);
 
-      var body = document.createElement("div");
-      body.className = "body";
-      var h = document.createElement("h2");
-      h.textContent = place.name;
-      var pr = document.createElement("p");
-      pr.className = "prod";
-      pr.textContent = product.brand + " " + product.name;
-      var dl = document.createElement("dl");
-      kindOf(place).facts(product, st).forEach(function (f) {
-        var dt = document.createElement("dt"), dd = document.createElement("dd");
-        dt.textContent = f[0];
-        if (f[2]) dd.appendChild(chip(f[2]));
-        dd.appendChild(document.createTextNode(f[1]));
-        dl.appendChild(dt); dl.appendChild(dd);
-      });
-      var open = document.createElement("span");
-      open.className = "open";
-      open.textContent = "Open " + place.name.toLowerCase() + " →";
-      body.appendChild(h); body.appendChild(pr); body.appendChild(dl); body.appendChild(open);
+      var body = make("div", "body");
+      body.appendChild(make("h2", null, area.name));
+      body.appendChild(make("p", "prod", tileName(tile)));
+      body.appendChild(factList(tile, area.st));
+      body.appendChild(make("span", "open", "Open →"));
       a.appendChild(body);
       cardsWrap.appendChild(a);
     });
+    if (areas.length) {
+      var add = make("button", "card add-card");
+      add.type = "button";
+      add.appendChild(make("span", "plus", "+"));
+      add.appendChild(make("span", null, "Add area"));
+      add.addEventListener("click", function () { openDialog(null); });
+      cardsWrap.appendChild(add);
+    }
     drawCards();
   }
   function drawCards() {
     Array.prototype.forEach.call(cardsWrap.querySelectorAll("canvas"), function (cv, k) {
-      var place = TV.PLACES[k];
-      TV.draw(cv, productOf(place), indexStates[place.id]);
+      TV.draw(cv, TV.TILES[areas[k].tile], areas[k].st);
     });
   }
-
+  function factList(tile, st) {
+    var dl = make("dl");
+    kindOf(tile).facts(tile, st).forEach(function (f) {
+      var dd = make("dd");
+      if (f[2]) dd.appendChild(chip(f[2]));
+      dd.appendChild(document.createTextNode(f[1]));
+      dl.appendChild(make("dt", null, f[0]));
+      dl.appendChild(dd);
+    });
+    return dl;
+  }
   function chip(color) {
-    var i = document.createElement("i");
-    i.className = "chip";
+    var i = make("i", "chip");
     i.style.background = color;
     return i;
   }
 
-  /* ---------- one place ---------- */
-  var product, state;
+  /* ---------- one area ---------- */
+  var tile, state, syncers = [], swatchDraws = [];
   var cv = el("cv"), wrap = el("canvasWrap");
 
-  function showPlace(place) {
-    current = place;
-    product = productOf(place);
-    state = getState(place);
+  function showArea(area) {
+    current = area;
+    tile = TV.TILES[area.tile];
+    state = area.st;
     el("indexView").hidden = true;
     el("placeView").hidden = false;
-    el("title").textContent = place.name;
-    el("subtitle").textContent = product.brand + " " + product.name +
-      (product.credit ? " · " + product.credit : "") + (product.material ? ". " + product.material + "." : "");
-    el("productNote").textContent = product.note || "";
-    document.title = place.name + " · Tile Visualizer";
-    Array.prototype.forEach.call(document.querySelectorAll("[data-kind]"), function (n) {
-      n.hidden = n.dataset.kind !== product.kind;
-    });
-    wrap.classList.toggle("fit", product.kind === "decor");
-    syncTabs();
-    if (product.kind === "strip") buildStrip(); else buildDecor();
-    syncShared();
+    el("title").textContent = area.name;
+    el("subtitle").textContent = tileName(tile) + " · " + sizeText(tile) +
+      (tile.credit ? " · " + tile.credit : "") + (tile.material ? ". " + tile.material + "." : "");
+    el("productNote").textContent = tile.note || "";
+    document.title = area.name + " · Tile Visualizer";
+    wrap.classList.toggle("fit", !!kindOf(tile).aspect);
+    buildGrouts();
+    buildControls();
     render();
+    changed();
   }
 
   function update() {
-    saveState(current);
+    syncers.forEach(function (f) { f(); });
     render();
+    changed();
   }
 
   function render() {
     if (!current) return;
     sizeStage();
-    TV.draw(cv, product, state);
+    TV.draw(cv, tile, state);
     var r = el("readout");
     r.innerHTML = "";
-    kindOf(current).facts(product, state).forEach(function (f) {
-      var s = document.createElement("span"), b = document.createElement("b");
+    kindOf(tile).facts(tile, state).forEach(function (f) {
+      var s = make("span"), b = make("b");
       s.appendChild(document.createTextNode(f[0] + " "));
       if (f[2]) b.appendChild(chip(f[2]));
       b.appendChild(document.createTextNode(f[1]));
       s.appendChild(b);
       r.appendChild(s);
     });
-    el("jointOut").textContent = state.joint + " mm";
-    el("customHex").textContent = state.grout;
-    if (product.kind === "strip") el("wallOut").textContent = state.wall + " cm";
-    writeUrl(placeHash(current, state));
   }
 
-  /* Decor surfaces are drawn whole, so the canvas takes the surface's proportions. */
+  /* Kinds with an aspect are drawn whole, so the canvas takes the surface's proportions. */
   function sizeStage() {
-    if (product.kind !== "decor") { cv.style.width = ""; cv.style.height = ""; return; }
+    var aspect = kindOf(tile).aspect;
+    if (!aspect) { cv.style.width = ""; cv.style.height = ""; return; }
+    var ratio = aspect(state);
     var cs = getComputedStyle(wrap);
     var avail = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     var maxH = Math.min(560, window.innerHeight * 0.6);
-    var h = avail * state.h / state.w, w = avail;
-    if (h > maxH) { h = maxH; w = h * state.w / state.h; }
+    var w = avail, h = avail / ratio;
+    if (h > maxH) { h = maxH; w = h * ratio; }
     cv.style.width = Math.round(w) + "px";
     cv.style.height = Math.round(h) + "px";
   }
 
-  /* Segmented control. Returns a sync function. */
-  function seg(id, items, key) {
-    var box = el(id);
-    box.innerHTML = "";
-    items.forEach(function (it) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.textContent = it.name;
-      b.addEventListener("click", function () { state[key] = it.id; sync(); onSegChange(); update(); });
-      box.appendChild(b);
-    });
-    function sync() {
-      Array.prototype.forEach.call(box.children, function (b, k) {
-        b.setAttribute("aria-pressed", String(items[k].id === state[key]));
-      });
-    }
-    sync();
-    return sync;
-  }
-  function onSegChange() {
-    if (product.kind === "decor") el("swapRow").hidden = state.pattern === "dash" || state.pattern === "dot";
-  }
-
-  /* Shared: grout, joint */
-  var swWrap = el("swatches");
-  TV.GROUTS.forEach(function (gr) {
-    var b = document.createElement("button");
+  /* Grout: the tile's suggestions (if any), the shared palette, a custom colour, and the joint. */
+  function groutButton(gr) {
+    var b = make("button", "sw");
     b.type = "button";
-    b.className = "sw";
     b.dataset.c = gr.c;
-    var dot = document.createElement("span"), nm = document.createElement("span");
-    dot.className = "dot"; dot.style.background = gr.c;
-    nm.className = "nm"; nm.textContent = gr.name;
-    b.appendChild(dot); b.appendChild(nm);
-    b.addEventListener("click", function () { state.grout = gr.c; syncShared(); update(); });
-    swWrap.appendChild(b);
-  });
-  function syncShared() {
-    Array.prototype.forEach.call(swWrap.children, function (b) {
-      b.setAttribute("aria-pressed", String(b.dataset.c === state.grout));
+    var dot = make("span", "dot");
+    dot.style.background = gr.c;
+    b.appendChild(dot);
+    b.appendChild(make("span", "nm", gr.name));
+    b.addEventListener("click", function () { state.grout = gr.c.toLowerCase(); update(); });
+    return b;
+  }
+  function buildGrouts() {
+    var sug = tile.grouts || [];
+    el("groutSuggest").hidden = !sug.length;
+    el("groutAllLabel").hidden = !sug.length;
+    el("groutSuggestSw").innerHTML = "";
+    sug.forEach(function (g) { el("groutSuggestSw").appendChild(groutButton(g)); });
+    el("swatches").innerHTML = "";
+    TV.GROUTS.forEach(function (g) { el("swatches").appendChild(groutButton(g)); });
+  }
+  function syncGrouts() {
+    Array.prototype.forEach.call(document.querySelectorAll("#groutPanel .sw"), function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.c.toLowerCase() === state.grout));
     });
     el("custom").value = state.grout;
+    el("customHex").textContent = state.grout;
     el("joint").value = state.joint;
+    el("jointOut").textContent = state.joint + " mm";
   }
-  el("custom").addEventListener("input", function (e) { state.grout = e.target.value.toLowerCase(); syncShared(); update(); });
+  el("custom").addEventListener("input", function (e) { state.grout = e.target.value.toLowerCase(); update(); });
   el("joint").addEventListener("input", function (e) { state.joint = parseFloat(e.target.value); update(); });
 
-  /* Strip controls */
-  var tsw = el("tileSw");
-  function buildStrip() {
-    tsw.innerHTML = "";
-    product.colors.forEach(function (t) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "sw";
-      b.dataset.id = t.id;
-      var dot = document.createElement("span"), nm = document.createElement("span");
-      dot.className = "dot"; dot.style.background = t.color;
-      nm.className = "nm"; nm.textContent = t.name;
-      b.appendChild(dot); b.appendChild(nm);
-      b.addEventListener("click", function () {
-        var k = state.tiles.indexOf(t.id);
-        if (k >= 0) { if (state.tiles.length > 1) state.tiles.splice(k, 1); }
-        else state.tiles.push(t.id);
-        syncTiles(); update();
+  /* Tile controls, built from the kind's control specs. */
+  var CONTROL = {
+    swatches: function (c, field) {
+      var box = make("div", "swatches" + (c.swatch ? " decor-sw" : (c.multi ? " tile-sw" : "")));
+      box.setAttribute("role", "group");
+      c.items.forEach(function (it) {
+        var b = make("button", "sw");
+        b.type = "button";
+        if (c.swatch) {
+          var swc = make("canvas");
+          b.appendChild(swc);
+          swatchDraws.push(function () { c.swatch(swc, it); });
+        } else {
+          var dot = make("span", "dot");
+          dot.style.background = it.color;
+          b.appendChild(dot);
+        }
+        b.appendChild(make("span", "nm", it.name));
+        b.addEventListener("click", function () {
+          if (!c.multi) state[c.key] = it.id;
+          else {
+            var k = state[c.key].indexOf(it.id);
+            if (k < 0) state[c.key].push(it.id);
+            else if (state[c.key].length > 1) state[c.key].splice(k, 1);
+          }
+          update();
+        });
+        box.appendChild(b);
       });
-      tsw.appendChild(b);
-    });
-    var many = product.colors.length > 1;
-    el("allTiles").hidden = !many;
-    el("allTiles").textContent = "Select all " + product.colors.length;
-    el("mixField").hidden = !many;
-    syncTiles();
-    seg("mixSeg", MIXES, "mix");
-    seg("layoutSeg", layoutsFor(product), "layout");
-    seg("angleSeg", ANGLES, "angle");
-    el("wall").value = state.wall;
-  }
-  function syncTiles() {
-    Array.prototype.forEach.call(tsw.children, function (b) {
-      b.setAttribute("aria-pressed", String(state.tiles.indexOf(b.dataset.id) >= 0));
-    });
-  }
-  el("allTiles").addEventListener("click", function () {
-    state.tiles = product.colors.map(function (t) { return t.id; });
-    syncTiles(); update();
-  });
-  el("wall").addEventListener("input", function (e) { state.wall = parseFloat(e.target.value); update(); });
-
-  /* Decor controls */
-  var csw = el("colorSw");
-  function buildDecor() {
-    csw.innerHTML = "";
-    product.colors.forEach(function (c) {
-      var b = document.createElement("button");
+      field.appendChild(box);
+      var all;
+      if (c.multi && c.selectAll && c.items.length > 1) {
+        all = make("button", "seg-btn", "Select all " + c.items.length);
+        all.type = "button";
+        all.addEventListener("click", function () { state[c.key] = c.items.map(function (it) { return it.id; }); update(); });
+        var row = make("div", "row");
+        row.appendChild(all);
+        field.appendChild(row);
+      }
+      return function () {
+        Array.prototype.forEach.call(box.children, function (b, k) {
+          var id = c.items[k].id;
+          b.setAttribute("aria-pressed", String(c.multi ? state[c.key].indexOf(id) >= 0 : state[c.key] === id));
+        });
+      };
+    },
+    seg: function (c, field) {
+      var box = make("div", "seg");
+      box.setAttribute("role", "group");
+      c.items.forEach(function (it) {
+        var b = make("button", null, it.name);
+        b.type = "button";
+        b.addEventListener("click", function () { state[c.key] = it.id; update(); });
+        box.appendChild(b);
+      });
+      field.appendChild(box);
+      return function () {
+        Array.prototype.forEach.call(box.children, function (b, k) {
+          b.setAttribute("aria-pressed", String(c.items[k].id === state[c.key]));
+        });
+      };
+    },
+    toggle: function (c, field) {
+      var b = make("button", "seg-btn", c.label);
       b.type = "button";
-      b.className = "sw";
-      b.dataset.id = c.id;
-      b.setAttribute("aria-label", c.name + " (Dash and Dot)");
-      var swc = document.createElement("canvas"), nm = document.createElement("span");
-      nm.className = "nm"; nm.textContent = c.name;
-      b.appendChild(swc); b.appendChild(nm);
-      b.addEventListener("click", function () { state.color = c.id; syncColors(); update(); });
-      csw.appendChild(b);
-    });
-    syncColors();
-    drawSwatches();
-    seg("patternSeg", PATTERNS, "pattern");
-    onSegChange();
-    el("dimW").value = state.w;
-    el("dimH").value = state.h;
-  }
-  function drawSwatches() {
-    Array.prototype.forEach.call(csw.querySelectorAll("canvas"), function (c, k) {
-      TV.drawDecorSwatch(c, product, product.colors[k]);
-    });
-  }
-  function syncColors() {
-    Array.prototype.forEach.call(csw.children, function (b) {
-      b.setAttribute("aria-pressed", String(b.dataset.id === state.color));
-    });
-  }
-  el("swap").addEventListener("click", function () { state.swap = !state.swap; update(); });
-  function dimInput(id, key, lo, hi) {
-    var inp = el(id);
-    inp.addEventListener("input", function () {
-      var v = parseFloat(inp.value);
-      if (inRange(v, lo, hi)) { state[key] = Math.round(v); update(); }
-    });
-    inp.addEventListener("change", function () { inp.value = state[key]; });
-  }
-  dimInput("dimW", "w", 15, 600);
-  dimInput("dimH", "h", 15, 300);
+      b.addEventListener("click", function () { state[c.key] = !state[c.key]; update(); });
+      field.appendChild(b);
+      return function () { b.setAttribute("aria-pressed", String(!!state[c.key])); };
+    },
+    range: function (c, field, id) {
+      var out = make("span");
+      var top = make("div", "top");
+      top.appendChild(field.firstChild);
+      top.appendChild(out);
+      field.appendChild(top);
+      var inp = make("input");
+      inp.type = "range"; inp.id = id; inp.min = c.min; inp.max = c.max; inp.step = c.step;
+      inp.addEventListener("input", function () { state[c.key] = parseFloat(inp.value); update(); });
+      field.appendChild(inp);
+      return function () { inp.value = state[c.key]; out.textContent = state[c.key] + " " + c.unit; };
+    },
+    numbers: function (c, field) {
+      var box = make("div", "dims"), inputs = [];
+      c.fields.forEach(function (f) {
+        var lab = make("label", "num", f.label + " ");
+        var inp = make("input");
+        inp.type = "number"; inp.min = f.min; inp.max = f.max; inp.step = 1; inp.inputMode = "numeric";
+        inp.addEventListener("input", function () {
+          var v = parseFloat(inp.value);
+          if (U.inRange(v, f.min, f.max)) { state[f.key] = Math.round(v); update(); }
+        });
+        inp.addEventListener("change", function () { inp.value = state[f.key]; });
+        lab.appendChild(inp);
+        lab.appendChild(document.createTextNode(" " + f.unit));
+        box.appendChild(lab);
+        inputs.push([inp, f.key]);
+      });
+      field.appendChild(box);
+      return function () {
+        inputs.forEach(function (x) { if (document.activeElement !== x[0]) x[0].value = state[x[1]]; });
+      };
+    }
+  };
 
-  /* Reset */
+  function buildControls() {
+    var box = el("tileControls");
+    box.innerHTML = "";
+    syncers = [syncGrouts];
+    swatchDraws = [];
+    kindOf(tile).controls(tile).forEach(function (c, n) {
+      var field = make("div", "field"), id = "ctl" + n;
+      if (c.type !== "toggle") {
+        var lab = make("label", null, c.label);
+        lab.id = id + "l";
+        if (c.type === "range") lab.htmlFor = id;
+        field.appendChild(lab);
+      }
+      var sync = CONTROL[c.type](c, field, id);
+      var group = field.querySelector("[role=group]");
+      if (group) group.setAttribute("aria-labelledby", id + "l");
+      box.appendChild(field);
+      syncers.push(function () {
+        field.hidden = c.show ? !c.show(state) : false;
+        sync();
+      });
+    });
+    syncers.forEach(function (f) { f(); });
+    drawSwatches();
+  }
+  function drawSwatches() { swatchDraws.forEach(function (f) { f(); }); }
+
   el("reset").addEventListener("click", function () {
-    states[current.id] = defaultsFor(current);
-    saveState(current);
-    showPlace(current);
+    current.st = state = optionsFor(tile);
+    showArea(current);
   });
+  el("editArea").addEventListener("click", function () { openDialog(current); });
+
+  /* ---------- add / edit area dialog ---------- */
+  var dlg = el("areaDialog"), picker = el("tilePicker"), editing = null, pickedTile = null;
+
+  function buildPicker() {
+    picker.innerHTML = "";
+    Object.keys(TV.TILES).forEach(function (id) {
+      var t = TV.TILES[id];
+      var b = make("button", "tile-opt");
+      b.type = "button";
+      b.dataset.id = id;
+      var cvp = make("canvas");
+      cvp.setAttribute("aria-hidden", "true");
+      b.appendChild(cvp);
+      var txt = make("span", "tile-txt");
+      txt.appendChild(make("b", null, tileName(t)));
+      txt.appendChild(make("span", null, sizeText(t) + " · " + t.colors.length + " colours"));
+      b.appendChild(txt);
+      b.addEventListener("click", function () { pickedTile = id; syncPicker(); });
+      picker.appendChild(b);
+    });
+  }
+  function syncPicker() {
+    Array.prototype.forEach.call(picker.children, function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.id === pickedTile));
+    });
+    el("dlgSave").disabled = !pickedTile;
+  }
+  function drawPicker() {
+    Array.prototype.forEach.call(picker.querySelectorAll("canvas"), function (c) {
+      var id = c.parentNode.dataset.id, t = TV.TILES[id];
+      // Show the area's own options on its current tile, the tile's defaults elsewhere.
+      var st = editing && editing.tile === id ? editing.st : optionsFor(t);
+      TV.draw(c, t, st);
+    });
+  }
+
+  function openDialog(area) {
+    editing = area;
+    pickedTile = area ? area.tile : null;
+    el("dlgTitle").textContent = area ? "Edit area" : "Add an area";
+    el("dlgName").value = area ? area.name : "";
+    el("dlgName").placeholder = "e.g. Bathroom floor";
+    el("dlgSave").textContent = area ? "Save" : "Add area";
+    el("dlgDelete").hidden = !area;
+    el("dlgError").hidden = true;
+    buildPicker();
+    syncPicker();
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+    drawPicker();
+    if (!area) el("dlgName").focus();
+  }
+  function closeDialog() { if (dlg.close) dlg.close(); else dlg.removeAttribute("open"); }
+
+  el("dlgForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = el("dlgName").value.trim().slice(0, 60);
+    if (!name) { el("dlgError").textContent = "Give the area a name."; el("dlgError").hidden = false; el("dlgName").focus(); return; }
+    if (!pickedTile) return;
+    var t = TV.TILES[pickedTile], area = editing;
+    if (area) {
+      if (area.tile !== pickedTile) { area.st = optionsFor(t, area.st); area.tile = pickedTile; }
+      area.name = name;
+      area.id = uniqueId(name, area);
+    } else {
+      area = { name: name, tile: pickedTile, st: optionsFor(t) };
+      area.id = uniqueId(name);
+      areas.push(area);
+    }
+    closeDialog();
+    buildTabs();
+    showArea(area);
+  });
+  el("dlgCancel").addEventListener("click", closeDialog);
+  el("dlgDelete").addEventListener("click", function () {
+    if (!editing || !window.confirm("Delete “" + editing.name + "”?")) return;
+    areas = areas.filter(function (a) { return a !== editing; });
+    closeDialog();
+    buildTabs();
+    showIndex();
+  });
+  ["addArea", "addFirst"].forEach(function (id) { el(id).addEventListener("click", function () { openDialog(null); }); });
 
   /* ---------- share ---------- */
   function copyText(text) {
@@ -526,14 +647,13 @@
   function redraw() {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(function () {
-      if (current) { render(); if (product.kind === "decor") drawSwatches(); }
-      else drawCards();
+      if (current) { render(); drawSwatches(); } else drawCards();
+      if (dlg.open) drawPicker();
     });
   }
   window.addEventListener("resize", redraw);
   if (window.ResizeObserver) new ResizeObserver(redraw).observe(document.querySelector(".wrap"));
   window.addEventListener("hashchange", route);
 
-  buildTabs();
   route();
 })();

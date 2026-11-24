@@ -6,17 +6,18 @@
   --muted: #62666c;
   --line: #d9dad7;
   --accent: #1b1d20;
+  --danger: #b3261e;
   --font: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #16181b; --panel: #1f2226; --ink: #eceeef; --muted: #9ba0a7; --line: #34383d; --accent: #eceeef;
+    --bg: #16181b; --panel: #1f2226; --ink: #eceeef; --muted: #9ba0a7; --line: #34383d; --accent: #eceeef; --danger: #f2827a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #16181b; --panel: #1f2226; --ink: #eceeef; --muted: #9ba0a7; --line: #34383d; --accent: #eceeef;
+  --bg: #16181b; --panel: #1f2226; --ink: #eceeef; --muted: #9ba0a7; --line: #34383d; --accent: #eceeef; --danger: #f2827a;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -25,7 +26,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); line-
 .wrap { max-width: 1040px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
 main { display: flex; flex-direction: column; gap: 16px; }
 .title { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; }
-.title > div { display: flex; flex-direction: column; gap: 2px; }
+.title > div:first-child { display: flex; flex-direction: column; gap: 2px; }
 h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
 .sub { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
@@ -34,6 +35,8 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; te
 .tabs a { flex: none; padding: 10px 12px; color: var(--muted); text-decoration: none; font-size: 0.92rem; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tabs a:hover { color: var(--ink); }
 .tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.tab-add { flex: none; appearance: none; background: none; border: 0; font: inherit; font-size: 0.92rem; font-weight: 500; color: var(--muted); padding: 10px 12px; cursor: pointer; white-space: nowrap; }
+.tab-add:hover { color: var(--ink); }
 .tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .stage { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
 canvas { display: block; }
@@ -72,8 +75,15 @@ canvas { display: block; }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .seg-btn { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; font-size: 0.85rem; padding: 7px 12px; border-radius: 8px; cursor: pointer; min-height: 36px; }
-#tileSw { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
-#tileSw .dot { height: 36px; }
+.tile-sw { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+.tile-sw .dot { height: 36px; }
+.field > .seg-btn { align-self: flex-start; }
+.fields { display: flex; flex-direction: column; gap: 14px; }
+.seg-btn[aria-pressed="true"] { background: var(--accent); color: var(--panel); border-color: var(--accent); font-weight: 600; }
+.seg-btn.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); font-weight: 600; }
+.seg-btn.danger { color: var(--danger); }
+.seg-btn:disabled { opacity: .45; cursor: default; }
+.title .actions { margin-left: 0; }
 .note { margin: 0; font-size: 0.8rem; color: var(--muted); }
 [hidden] { display: none !important; }
 .share { color: var(--ink); font-weight: 600; min-width: 7.5em; }
@@ -102,3 +112,26 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .card dt { color: var(--muted); }
 .card dd { margin: 0; font-weight: 500; }
 .card .open { margin-top: 6px; font-size: 0.85rem; font-weight: 600; }
+
+/* Empty set and the "Add area" card */
+.empty { background: var(--panel); border: 1px dashed var(--line); border-radius: 10px; padding: 28px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.empty p { margin: 0; font-weight: 600; }
+.add-card { appearance: none; font: inherit; color: var(--muted); background: transparent; border: 1px dashed var(--line); align-items: center; justify-content: center; gap: 6px; min-height: 180px; cursor: pointer; font-weight: 600; }
+.add-card:hover { color: var(--ink); }
+.add-card .plus { font-size: 2rem; line-height: 1; font-weight: 400; }
+
+/* Add / edit area dialog */
+dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(0,0,0,.4); }
+dialog form { display: flex; flex-direction: column; gap: 16px; padding: 18px; }
+dialog h2 { margin: 0; font-size: 1.15rem; }
+dialog input[type="text"] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; }
+.err { margin: 0; color: var(--danger); font-size: 0.85rem; }
+.tile-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.tile-opt { appearance: none; font: inherit; color: inherit; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 0; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; }
+.tile-opt canvas { width: 100%; aspect-ratio: 16 / 10; }
+.tile-opt .tile-txt { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; font-size: 0.8rem; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); flex: 1; }
+.tile-opt .tile-txt b { color: var(--ink); font-size: 0.88rem; }
+.tile-opt[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dlg-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dlg-actions .spacer { flex: 1; }
