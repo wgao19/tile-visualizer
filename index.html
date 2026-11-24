@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=4">
+<link rel="stylesheet" href="css/styles.css?v=5">
 </head>
 <body>
 <div class="wrap">
@@ -89,32 +89,39 @@
   </main>
 </div>
 
-<!-- Add or edit an area: name it, pick a tile -->
-<dialog id="areaDialog" aria-labelledby="dlgTitle">
+<!-- Add or edit an area: name it, pick a tile. A side sheet on wide screens, full screen on phones. -->
+<dialog id="areaDialog" class="sheet" aria-labelledby="dlgTitle">
   <form id="dlgForm" method="dialog" novalidate>
-    <h2 id="dlgTitle">Add an area</h2>
-    <div class="field">
-      <label for="dlgName">Name</label>
-      <input type="text" id="dlgName" maxlength="60" autocomplete="off">
-      <p class="err" id="dlgError" hidden></p>
+    <header class="sheet-head">
+      <h2 id="dlgTitle">Add an area</h2>
+      <button type="button" class="icon-btn" id="dlgClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="sheet-body">
+      <div class="field">
+        <label for="dlgName">Name</label>
+        <input type="text" id="dlgName" maxlength="60" autocomplete="off">
+        <p class="err" id="dlgError" hidden></p>
+      </div>
+      <div class="field">
+        <div class="top"><label id="tpl" for="tileSearch">Select a tile</label><span id="tileCount"></span></div>
+        <input type="search" id="tileSearch" placeholder="Search by name, brand or colour" autocomplete="off">
+      </div>
+      <div class="tile-library" id="tilePicker" role="group" aria-labelledby="tpl"></div>
+      <p class="note" id="tileNone" hidden>No tiles match.</p>
     </div>
-    <div class="field">
-      <label id="tpl">Select a tile</label>
-      <div class="tile-picker" id="tilePicker" role="group" aria-labelledby="tpl"></div>
-    </div>
-    <div class="dlg-actions">
+    <footer class="sheet-foot">
       <button type="button" class="seg-btn danger" id="dlgDelete">Delete area</button>
       <span class="spacer"></span>
       <button type="button" class="seg-btn" id="dlgCancel">Cancel</button>
       <button type="submit" class="seg-btn primary" id="dlgSave">Add area</button>
-    </div>
+    </footer>
   </form>
 </dialog>
 
-<script src="js/data.js?v=4"></script>
-<script src="js/shapes.js?v=4"></script>
-<script src="js/kinds.js?v=4"></script>
-<script src="js/render.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/data.js?v=5"></script>
+<script src="js/shapes.js?v=5"></script>
+<script src="js/kinds.js?v=5"></script>
+<script src="js/render.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>
