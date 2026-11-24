@@ -51,6 +51,11 @@
     { id: "split-v", name: "Left / right" },
     { id: "alt", name: "Alternate" }
   ];
+  /* Zoom range for the mix kind: up to five tile lengths across, never less than 2 m. */
+  function wallRange(tile) {
+    var longest = Math.max(tile.size.w, tile.size.l);
+    return { min: 20, max: Math.min(600, Math.max(200, Math.ceil(longest * 5 / 5) * 5)) };
+  }
   function layoutsFor(tile) {
     return LAYOUTS.filter(function (l) { return (tile.layouts || ["straight"]).indexOf(l.id) >= 0; });
   }
@@ -70,7 +75,9 @@
         var ls = layoutsFor(tile);
         if (!byId(ls, st.layout)) st.layout = ls[0].id;
         if (!byId(ANGLES, st.angle)) st.angle = 0;
-        if (!inRange(st.wall, 40, 200)) st.wall = 90;
+        var wr = wallRange(tile);
+        if (!isFinite(st.wall)) st.wall = 90;
+        st.wall = Math.min(wr.max, Math.max(wr.min, st.wall));
       },
       serialize: function (st) {
         return [["t", st.tiles.join(",")], ["m", st.mix], ["l", st.layout], ["a", st.angle], ["w", st.wall]];
@@ -81,7 +88,7 @@
         if (p.l) st.layout = p.l;
         if (p.a != null) st.angle = parseFloat(p.a);
         var w = parseFloat(p.w);
-        if (inRange(w, 40, 200)) st.wall = Math.round(w / 5) * 5;
+        if (inRange(w, 20, 600)) st.wall = Math.round(w / 5) * 5;
       },
       facts: function (tile, st) {
         var f = [["Tile", tile.colors.filter(function (t) { return st.tiles.indexOf(t.id) >= 0; })
@@ -96,7 +103,7 @@
           { type: "seg", key: "mix", label: "Mix pattern", items: MIXES, show: function (st) { return st.tiles.length > 1; } },
           { type: "seg", key: "layout", label: "Layout", items: layoutsFor(tile), show: function () { return layoutsFor(tile).length > 1; } },
           { type: "seg", key: "angle", label: "Direction", items: ANGLES },
-          { type: "range", key: "wall", label: "Wall width shown", min: 40, max: 200, step: 5, unit: "cm" }
+          { type: "range", key: "wall", label: "Wall width shown", min: wallRange(tile).min, max: wallRange(tile).max, step: 5, unit: "cm" }
         ];
       },
       draw: function (cv, tile, st) { TV.drawStrip(cv, tile, st); }

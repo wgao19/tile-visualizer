@@ -38,6 +38,19 @@
     return pat;
   }
 
+  /* A colour with `tones` gets one of them per tile, in proportion to their weights. */
+  function toneOf(col, i, j) {
+    if (!col.tones || !col.tones.length) return col.color;
+    var total = 0, k;
+    for (k = 0; k < col.tones.length; k++) total += col.tones[k].w || 1;
+    var r = rnd(i + 19.3, j + 5.7) * total;
+    for (k = 0; k < col.tones.length; k++) {
+      r -= col.tones[k].w || 1;
+      if (r < 0) return col.tones[k].c;
+    }
+    return col.tones[col.tones.length - 1].c;
+  }
+
   /* Size the backing store to the element and return a CSS-pixel context. */
   function setup(cv) {
     var dpr = window.devicePixelRatio || 1;
@@ -90,7 +103,7 @@
         var y = j * pitchY - TL / 2 + (st.layout === "drop" && (i & 1) ? pitchY / 2 : 0);
         var f = 0.965 + rnd(i, j) * 0.07;
         shapeFn(ctx, x, y, TW, TL, product.shape);
-        ctx.fillStyle = shade(pick(i, j).color, f);
+        ctx.fillStyle = shade(toneOf(pick(i, j), i, j), f);
         ctx.fill();
         ctx.fillStyle = pat;
         ctx.fill();
