@@ -64,14 +64,67 @@
   }
 
   /* ---------- mix kind (Bottone, plain rectangles) ---------- */
+  /*
+   * Where each tile goes for the mix kind's layouts, around (0, 0), in centimetres.
+   * Returns [{ x, y, w, h, i, j }] boxes, or for chevron [{ poly: [[x, y]…], i, j }].
+   * i and j index the tile for colour mixing (columns / rows).
+   *   straight, drop   a grid; drop shifts every other column by half a tile
+   *   herringbone      L-shaped staircase of horizontal and vertical tiles; any length/width ratio
+   *   chevron          columns of parallelograms meeting in a V; tile.chevronAngle (default 45°)
+   */
+  TV.mixPlacements = function (tile, st, reach) {
+    var TW = tile.size.w, TL = tile.size.l, g = st.joint / 10, out = [], i, j;
+    if (st.layout === "herringbone") {
+      // H_k at (k a, k a) lying down, V_k at (k a, k a + a) standing; bands repeat every (b, -b).
+      var a = TW + g, bb = TL + g;
+      var M = Math.ceil(2 * reach / bb) + 2;
+      for (var m = -M; m <= M; m++) {
+        var K = Math.ceil((2 * reach + Math.abs(m) * bb) / a) + 2;
+        for (var k = -K; k <= K; k++) {
+          var hx = k * a + m * bb, hy = k * a - m * bb;
+          if (Math.abs(hx) > reach + TL || Math.abs(hy) > reach + TL) continue;
+          out.push({ x: hx, y: hy, w: TL, h: TW, i: 2 * m, j: k });
+          out.push({ x: hx, y: hy + a, w: TW, h: TL, i: 2 * m + 1, j: k });
+        }
+      }
+      return out;
+    }
+    if (st.layout === "chevron") {
+      var th = (tile.chevronAngle || 45) * Math.PI / 180;
+      var cw = TL * Math.cos(th), rise = TL * Math.sin(th), h = TW / Math.cos(th);
+      var px = cw + g, py = h + g / Math.cos(th);
+      var C = Math.ceil(reach / px) + 1, J = Math.ceil((reach + rise) / py) + 1;
+      for (i = -C; i <= C; i++) {
+        var x0 = i * px, up = (i & 1) === 0;
+        for (j = -J; j <= J; j++) {
+          var y0 = j * py;
+          // Even columns rise to the right, odd columns fall, so neighbours meet in a V.
+          var yl = up ? y0 : y0 - rise, yr = up ? y0 - rise : y0;
+          out.push({ poly: [[x0, yl], [x0 + cw, yr], [x0 + cw, yr + h], [x0, yl + h]], i: i, j: j });
+        }
+      }
+      return out;
+    }
+    var pitchX = TW + g, pitchY = TL + g;
+    var nx = Math.ceil(reach / pitchX), ny = Math.ceil(reach / pitchY);
+    for (i = -nx; i <= nx; i++) {
+      for (j = -ny; j <= ny; j++) {
+        out.push({
+          x: i * pitchX - TW / 2,
+          y: j * pitchY - TL / 2 + (st.layout === "drop" && (i & 1) ? pitchY / 2 : 0),
+          w: TW, h: TL, i: i, j: j
+        });
+      }
+    }
+    return out;
+  };
+
   TV.drawStrip = function (cv, product, st) {
     var c = setup(cv);
     if (!c) return;
     var ctx = c.ctx, cssW = c.w, cssH = c.h;
-    var TW = product.size.w, TL = product.size.l;
     var shapeFn = TV.SHAPES[product.shape.type] || TV.SHAPES.rect;
     var s = cssW / st.wall;
-    var g = st.joint / 10;
     var sel = product.colors.filter(function (t) { return st.tiles.indexOf(t.id) >= 0; });
     var n = sel.length;
     function pick(i, j) {
@@ -89,9 +142,7 @@
     ctx.fillRect(0, 0, cssW, cssH);
 
     var wallH = cssH / s;
-    var reach = Math.hypot(st.wall, wallH) / 2 + Math.max(TW, TL);
-    var pitchX = TW + g, pitchY = TL + g;
-    var nx = Math.ceil(reach / pitchX), ny = Math.ceil(reach / pitchY);
+    var reach = Math.hypot(st.wall, wallH) / 2 + Math.max(product.size.w, product.size.l);
 
     ctx.save();
     ctx.translate(cssW / 2, cssH / 2);
@@ -99,21 +150,24 @@
     ctx.scale(s, s);
     var pat = noisePattern(ctx, s);
     ctx.lineJoin = "round";
-    for (var i = -nx; i <= nx; i++) {
-      for (var j = -ny; j <= ny; j++) {
-        var x = i * pitchX - TW / 2;
-        var y = j * pitchY - TL / 2 + (st.layout === "drop" && (i & 1) ? pitchY / 2 : 0);
-        var f = 0.965 + rnd(i, j) * 0.07;
-        shapeFn(ctx, x, y, TW, TL, product.shape);
-        ctx.fillStyle = shade(toneOf(pick(i, j), i, j), f);
-        ctx.fill();
-        ctx.fillStyle = pat;
-        ctx.fill();
-        ctx.lineWidth = 1.3 / s;
-        ctx.strokeStyle = "rgba(0,0,0,0.24)";
-        ctx.stroke();
+    TV.mixPlacements(product, st, reach).forEach(function (t) {
+      if (t.poly) {
+        ctx.beginPath();
+        ctx.moveTo(t.poly[0][0], t.poly[0][1]);
+        for (var k = 1; k < t.poly.length; k++) ctx.lineTo(t.poly[k][0], t.poly[k][1]);
+        ctx.closePath();
+      } else {
+        shapeFn(ctx, t.x, t.y, t.w, t.h, product.shape);
       }
-    }
+      var f = 0.965 + rnd(t.i, t.j) * 0.07;
+      ctx.fillStyle = shade(toneOf(pick(t.i, t.j), t.i, t.j), f);
+      ctx.fill();
+      ctx.fillStyle = pat;
+      ctx.fill();
+      ctx.lineWidth = 1.3 / s;
+      ctx.strokeStyle = "rgba(0,0,0,0.24)";
+      ctx.stroke();
+    });
     ctx.restore();
   };
 
