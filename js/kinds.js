@@ -16,7 +16,7 @@
  * Grout and joint belong to the area, not the kind, and are handled in js/app.js.
  * Link keys used by the app itself: n (name), tile, g (grout), j (joint).
  *
- * Control specs:
+ * Control specs (any can add `place: "area"` to sit with the preview instead of with the tile options):
  *   { type: "swatches", key, label, items, multi?, selectAll?, one?, grouped?, swatch?(canvas, item, st) }
  *                       grouped: items with a `group` get a heading per group
  *   { type: "seg",      key, label, items: [{ id, name }], show?(st) }
@@ -129,7 +129,7 @@
           { type: "seg", key: "mix", label: "Mix pattern", items: MIXES, show: function (st) { return st.tiles.length > 1; } },
           { type: "seg", key: "layout", label: "Layout", items: layoutsFor(tile), show: function () { return layoutsFor(tile).length > 1; } },
           { type: "seg", key: "angle", label: "Direction", items: ANGLES },
-          { type: "range", key: "wall", label: "Wall width shown", min: wallRange(tile).min, max: wallRange(tile).max, step: 5, unit: "cm" }
+          { type: "range", key: "wall", label: "Wall width shown", min: wallRange(tile).min, max: wallRange(tile).max, step: 5, unit: "cm", place: "area" }
         ];
       },
       draw: function (cv, tile, st) { TV.drawStrip(cv, tile, st); }
@@ -180,7 +180,7 @@
         if (st.turn !== "none") f.push(["Rotation", byId(TURNS, st.turn).name.toLowerCase()]);
         var mix = names.length > 1 ? st.variants.map(function (id) { return L.counts[id] + " " + byId(all, id).name; }) : [];
         var count = L.total + (mix.length || L.cut ? " (" + mix.join(", ") + (L.cut ? (mix.length ? "; " : "") + L.cut + " cut" : "") + ")" : "");
-        return f.concat(groutFacts(tile, st)).concat([["Surface", st.w + " × " + st.h + " cm"], ["Tiles", count]]);
+        return f.concat(groutFacts(tile, st)).concat([["Area", st.w + " × " + st.h + " cm"], ["Tiles", count]]);
       },
       controls: function (tile) {
         var c = [
@@ -192,7 +192,7 @@
             show: function (st) { return st.variants.length > 1 && st.pattern !== "random"; } }
         ];
         if (turnable(tile)) c.push({ type: "seg", key: "turn", label: "Rotation", items: TURNS });
-        c.push({ type: "numbers", label: "Surface size", fields: [
+        c.push({ type: "numbers", label: "Area size", place: "area", fields: [
           { key: "w", label: "Width", min: 15, max: 600, unit: "cm" },
           { key: "h", label: "Height", min: 15, max: 300, unit: "cm" }
         ] });
