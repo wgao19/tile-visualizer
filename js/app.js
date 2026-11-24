@@ -337,6 +337,7 @@
   function update() {
     syncers.forEach(function (f) { f(); });
     render();
+    drawSwatches(); // swatches can depend on the options (a decor drawn in the chosen colour and grout)
     changed();
   }
 
@@ -406,7 +407,7 @@
   /* Tile controls, built from the kind's control specs. */
   var CONTROL = {
     swatches: function (c, field) {
-      var box = make("div", "swatches" + (c.swatch ? " decor-sw" : (c.multi ? " tile-sw" : "")));
+      var box = make("div", "swatches" + (c.swatch ? (c.one ? " decor-sw one" : " decor-sw") : (c.multi ? " tile-sw" : "")));
       box.setAttribute("role", "group");
       c.items.forEach(function (it) {
         var b = make("button", "sw");
@@ -414,7 +415,7 @@
         if (c.swatch) {
           var swc = make("canvas");
           b.appendChild(swc);
-          swatchDraws.push(function () { c.swatch(swc, it); });
+          swatchDraws.push(function () { c.swatch(swc, it, state); });
         } else {
           var dot = make("span", "dot");
           dot.style.background = it.tones ? toneStripes(it.tones) : it.color;
@@ -465,6 +466,13 @@
         });
       };
     },
+    action: function (c, field) {
+      var b = make("button", "seg-btn", c.label);
+      b.type = "button";
+      b.addEventListener("click", function () { c.run(state); update(); });
+      field.appendChild(b);
+      return function () {};
+    },
     toggle: function (c, field) {
       var b = make("button", "seg-btn", c.label);
       b.type = "button";
@@ -514,7 +522,7 @@
     swatchDraws = [];
     kindOf(tile).controls(tile).forEach(function (c, n) {
       var field = make("div", "field"), id = "ctl" + n;
-      if (c.type !== "toggle") {
+      if (c.type !== "toggle" && c.type !== "action") {
         var lab = make("label", null, c.label);
         lab.id = id + "l";
         if (c.type === "range") lab.htmlFor = id;

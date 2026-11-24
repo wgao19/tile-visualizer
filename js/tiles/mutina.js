@@ -68,7 +68,7 @@
       credit: "Josef & Anni Albers Foundation",
       material: "Glazed, unrectified porcelain stoneware, 9 mm",
       size: { w: 15, l: 15 },
-      border: 0.123,
+      turn: false,
       colors: [
         { id: "sea", name: "Sea", main: "#4d768d", bar: "#275569", accent: "#023546", photographed: "dot" },
         { id: "evergreen", name: "Evergreen", main: "#3a5351", bar: "#397370", accent: "#12100f", photographed: "dash" },
@@ -78,7 +78,11 @@
         { id: "sage", name: "Sage", main: "#caceb4", bar: "#e3dec0", accent: "#c6b77d", photographed: "dash" },
         { id: "peach", name: "Peach", main: "#ef8b72", bar: "#eca492", accent: "#e9bdb3", photographed: "dot" }
       ],
-      defaults: { color: "sea", pattern: "dash", grout: "#f2efe9", joint: 2, w: 240, h: 60 },
+      decors: [
+        { id: "dash", name: "Dash", paint: "homage", variant: "dash", border: 0.123 },
+        { id: "dot", name: "Dot", paint: "homage", variant: "dot", border: 0.123 }
+      ],
+      defaults: { color: "sea", decors: ["dash"], pattern: "alt", grout: "#f2efe9", joint: 2, w: 240, h: 60 },
       note: "Homage to the Square, 15 × 15 cm, 9 mm. Mutina's site photographs one decor per colour; the other decor's tones are estimated."
     },
 
@@ -524,6 +528,265 @@
       ],
       defaults: { tiles: ["dover-white-smooth"], grout: "#cdbfa6", joint: 3, wall: 150, angle: 0 },
       note: "Time, nominal 20.5 × 20.5 cm. The rough finish is speckled; it's drawn as its average colour."
+    },
+
+    "mutina-aurore": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Aurore",
+      name: "Aurore",
+      credit: "Vincent Van Duysen",
+      material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
+      size: { w: 20.5, l: 20.5 },
+      colors: [
+        { id: "charcoal", name: "Charcoal", base: "#4f4b4a", cross: "#a7a2a1", line: "#2f2c2b" },
+        { id: "light-blue", name: "Light Blue", base: "#c1c4c6", cross: "#eeeeec", line: "#b48a6c" },
+        { id: "light-green", name: "Light Green", base: "#c4bdab", cross: "#6e5d47", line: "#6e5d47" },
+        { id: "light-grey", name: "Light Grey", base: "#dcdcdb", cross: "#7c6f66", line: "#f4f4f2" }
+      ],
+      decors: [
+        { id: "plain", name: "Plain", paint: "plain" },
+        { id: "grid-s", name: "Grid S", paint: "grid", cols: 8, rows: 8, minor: true },
+        { id: "grid-l", name: "Grid L", paint: "grid", cols: 4, rows: 8 }
+      ],
+      defaults: { color: "light-blue", decors: ["plain", "grid-s"], pattern: "random", grout: "#e6dcc8", joint: 2, w: 120, h: 90 },
+      note: "Aurore, 20.5 × 20.5 cm. Grid S and Grid L are chalk-like strokes over the base colour; line spacing is measured from Mutina's photos."
+    },
+
+    "mutina-betty": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Betty",
+      name: "Betty",
+      credit: "Raw Edges",
+      material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
+      size: { w: 20.5, l: 20.5 },
+      colors: [
+        { id: "blush", name: "Blush", base: "#e5c5af", motif: "#cb9d81", frame: "#c58a6c" },
+        { id: "concrete", name: "Concrete", base: "#cdccc4", motif: "#e5e3db", frame: "#b3afa6" },
+        { id: "night-blue", name: "Night Blue", base: "#394c5b", motif: "#52697b", frame: "#2b3038" }
+      ],
+      decors: [
+        { id: "plain", name: "Plain", paint: "plain" },
+        { id: "t", name: "T Shape", paint: "betty", shape: "t" },
+        { id: "plus", name: "Plus", paint: "betty", shape: "plus" },
+        { id: "frame", name: "Frame", paint: "betty", shape: "frame" },
+        { id: "set", name: "Set", paint: "betty", shape: "set" }
+      ],
+      defaults: { color: "blush", decors: ["t"], turn: "random", grout: "#e6dcc8", joint: 2, w: 120, h: 120 },
+      note: "Betty, 20.5 × 20.5 cm. Turn the T shapes randomly for labyrinths, or alternate them for weaves."
+    },
+
+    "mutina-fringe": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Fringe",
+      name: "Fringe",
+      credit: "Michael Anastassiades",
+      material: "Unglazed, rectified porcelain stoneware, 12 mm",
+      size: { w: 12.3, l: 12.3 },
+      colors: [
+        { id: "anthracite", name: "Anthracite", base: "#564b4b" },
+        { id: "grey", name: "Grey", base: "#aca6a2" },
+        { id: "red", name: "Red", base: "#ab5f35" },
+        { id: "rose", name: "Rose", base: "#e1bc9d" },
+        { id: "white", name: "White", base: "#e3e0dc" }
+      ],
+      decors: [
+        { id: "bold", name: "Bold", paint: "fringe", segments: 8, groove: 0.22 },
+        { id: "thin", name: "Thin", paint: "fringe", segments: 20, groove: 0.16 }
+      ],
+      defaults: { color: "grey", decors: ["bold"], turn: "alt", grout: "#e6dcc8", joint: 2, w: 120, h: 90 },
+      note: "Fringe, 12.3 × 12.3 cm. Bold has 15 mm segments, Thin 6 mm. The grooves take the grout colour; alternate the turn for a basket weave."
+    },
+
+    "mutina-chamotte": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Chamotte",
+      name: "Chamotte",
+      credit: "Patricia Urquiola",
+      material: "Extruded glazed, about 10 mm",
+      size: { w: 7.2, l: 21.3 },
+      colors: [
+        { id: "bianco", name: "Bianco", base: "#cfcdcd", gloss: true },
+        { id: "ocra", name: "Ocra", base: "#6f5a38", gloss: true },
+        { id: "blu", name: "Blu", base: "#2c2d40", gloss: true },
+        { id: "nero", name: "Nero", base: "#1d1916", gloss: true },
+        { id: "verde", name: "Verde", base: "#24443a", gloss: true },
+        { id: "terra", name: "Terra", base: "#742a18", gloss: true }
+      ],
+      decors: [
+        { id: "mono", name: "Mono", paint: "chamotte" },
+        { id: "linea", name: "Linea", paint: "chamotte", ridges: 6 },
+        { id: "quadra", name: "Quadra", paint: "chamotte", ridges: 6, quadra: true }
+      ],
+      defaults: { color: "verde", decors: ["linea"], orient: "v", grout: "#bfbcb6", joint: 2, w: 120, h: 90 },
+      note: "Chamotte, 7.2 × 21.3 cm. The uneven, glossy glaze is only suggested here; the real tile varies much more."
+    },
+
+    "mutina-pico-60x60": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Pico",
+      name: "Pico 60 × 60",
+      credit: "Ronan & Erwan Bouroullec",
+      material: "Unglazed homogeneous porcelain stoneware, 12 mm",
+      size: { w: 60, l: 60 },
+      turn: false,
+      colors: [
+        { id: "blanc", name: "Blanc", base: "#e8e0ce" },
+        { id: "gris", name: "Gris", base: "#b0a8a0" },
+        { id: "argile", name: "Argile", base: "#b48869" },
+        { id: "satin", name: "Satin", base: "#f5f1ec" },
+        { id: "blue", name: "Blue", base: "#686a6e" }
+      ],
+      decors: [
+        { id: "down", name: "Down", paint: "dots", mode: "down", pitch: 1.2 },
+        { id: "up", name: "Up", paint: "dots", mode: "up", pitch: 1.2 },
+        { id: "red-dots", name: "Red Dots", paint: "dots", mode: "down", pitch: 1.2, color: "#b06e5e" },
+        { id: "blue-dots", name: "Blue Dots", paint: "dots", mode: "down", pitch: 1.2, color: "#6f8a9a" }
+      ],
+      defaults: { color: "gris", decors: ["down"], grout: "#bfbcb6", joint: 2, w: 240, h: 120, orient: "v" },
+      note: "Pico, 60 × 60 cm. A fine grid of sunken (Down) or raised (Up) dots, some with red or blue in them. The dot spacing is estimated."
+    },
+
+    "mutina-pico-60x120": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Pico",
+      name: "Pico 60 × 120",
+      credit: "Ronan & Erwan Bouroullec",
+      material: "Unglazed homogeneous porcelain stoneware, 12 mm",
+      size: { w: 60, l: 120 },
+      turn: false,
+      colors: [
+        { id: "blanc", name: "Blanc", base: "#e8e0ce" },
+        { id: "gris", name: "Gris", base: "#b0a8a0" },
+        { id: "argile", name: "Argile", base: "#b48869" },
+        { id: "satin", name: "Satin", base: "#f5f1ec" },
+        { id: "blue", name: "Blue", base: "#686a6e" }
+      ],
+      decors: [
+        { id: "down", name: "Down", paint: "dots", mode: "down", pitch: 1.2 },
+        { id: "up", name: "Up", paint: "dots", mode: "up", pitch: 1.2 },
+        { id: "red-dots", name: "Red Dots", paint: "dots", mode: "down", pitch: 1.2, color: "#b06e5e" },
+        { id: "blue-dots", name: "Blue Dots", paint: "dots", mode: "down", pitch: 1.2, color: "#6f8a9a" }
+      ],
+      defaults: { color: "gris", decors: ["down"], grout: "#bfbcb6", joint: 2, w: 300, h: 150, orient: "h" },
+      note: "Pico, 60 × 120 cm. A fine grid of sunken (Down) or raised (Up) dots, some with red or blue in them. The dot spacing is estimated."
+    },
+
+    "mutina-pico-120x120": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Pico",
+      name: "Pico 120 × 120",
+      credit: "Ronan & Erwan Bouroullec",
+      material: "Unglazed homogeneous porcelain stoneware, 12 mm",
+      size: { w: 120, l: 120 },
+      turn: false,
+      colors: [
+        { id: "blanc", name: "Blanc", base: "#e8e0ce" },
+        { id: "gris", name: "Gris", base: "#b0a8a0" },
+        { id: "argile", name: "Argile", base: "#b48869" },
+        { id: "satin", name: "Satin", base: "#f5f1ec" },
+        { id: "blue", name: "Blue", base: "#686a6e" }
+      ],
+      decors: [
+        { id: "down", name: "Down", paint: "dots", mode: "down", pitch: 1.2 },
+        { id: "up", name: "Up", paint: "dots", mode: "up", pitch: 1.2 },
+        { id: "red-dots", name: "Red Dots", paint: "dots", mode: "down", pitch: 1.2, color: "#b06e5e" },
+        { id: "blue-dots", name: "Blue Dots", paint: "dots", mode: "down", pitch: 1.2, color: "#6f8a9a" }
+      ],
+      defaults: { color: "gris", decors: ["down"], grout: "#bfbcb6", joint: 2, w: 360, h: 240, orient: "v" },
+      note: "Pico, 120 × 120 cm. A fine grid of sunken (Down) or raised (Up) dots, some with red or blue in them. The dot spacing is estimated."
+    },
+
+    "mutina-punto": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Punto",
+      name: "Punto",
+      credit: "Ronan & Erwan Bouroullec",
+      material: "Glazed pressed body, sold 5 to a 21.1 × 31.5 cm net",
+      size: { w: 31.5, l: 4 },
+      turn: false,
+      colors: [
+        { id: "blanc", name: "Blanc glossy", base: "#efeade", gloss: true },
+        { id: "gris", name: "Gris glossy", base: "#8f8e8a", gloss: true },
+        { id: "brun", name: "Brun glossy", base: "#5c1c09", gloss: true },
+        { id: "vert", name: "Vert glossy", base: "#203f10", gloss: true },
+        { id: "rose", name: "Rose glossy", base: "#e6baa3", gloss: true },
+        { id: "white", name: "White matt", base: "#ebe7dc" },
+        { id: "grey", name: "Grey matt", base: "#9a9a95" },
+        { id: "red", name: "Red matt", base: "#a5694f" },
+        { id: "blue", name: "Blue matt", base: "#7b939c" },
+        { id: "green", name: "Green matt", base: "#808370" }
+      ],
+      decors: [
+        { id: "up", name: "Up", paint: "dots", mode: "up", count: 6, radius: 0.55 },
+        { id: "down", name: "Down", paint: "dots", mode: "down", count: 6, radius: 0.6 }
+      ],
+      defaults: { color: "grey", decors: ["up"], orient: "h", grout: "#bfbcb6", joint: 2, w: 126, h: 63 },
+      note: "Punto, 31.5 × 4 cm strips with six raised (Up) or sunken (Down) dots. Wall only."
+    },
+
+    "mutina-tape": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Tape",
+      name: "Tape",
+      credit: "Raw Edges",
+      material: "Glazed porcelain stoneware, 10 mm",
+      size: { w: 20.5, l: 20.5 },
+      colors: [
+        { id: "black", name: "Black", base: "#3e4347", cobble: "#c8c9bf", grain: "#616c69", mesh: "#999e9f", zig: "#222220" },
+        { id: "blue", name: "Blue", base: "#deded6", cobble: "#657a8c", grain: "#9eacb4", mesh: "#7e8e8e", zig: "#1a3845" },
+        { id: "brown", name: "Brown", base: "#deded6", cobble: "#b0785d", grain: "#ab9d83", mesh: "#aea798", zig: "#73524d" },
+        { id: "green", name: "Green", base: "#dfdfd7", cobble: "#798c86", grain: "#a4b1a9", mesh: "#8d8e89", zig: "#404e50" },
+        { id: "white", name: "White", base: "#deded6", cobble: "#d2cec2", grain: "#b9b6af", mesh: "#bfbfb8", zig: "#62615c" }
+      ],
+      decors: [
+        { id: "base", name: "Base", paint: "plain" },
+        { id: "cobble", name: "Cobble", paint: "tape", motif: "cobble" },
+        { id: "cobble-half", name: "Cobble Half", paint: "tape", motif: "cobble", half: true },
+        { id: "grainy", name: "Grainy", paint: "tape", motif: "grainy" },
+        { id: "grainy-half", name: "Grainy Half", paint: "tape", motif: "grainy", half: true },
+        { id: "mesh", name: "Mesh", paint: "tape", motif: "mesh" },
+        { id: "mesh-half", name: "Mesh Half", paint: "tape", motif: "mesh", half: true },
+        { id: "zigzag", name: "Zigzag", paint: "tape", motif: "zigzag" },
+        { id: "zigzag-half", name: "Zigzag Half", paint: "tape", motif: "zigzag", half: true }
+      ],
+      defaults: { color: "blue", decors: ["base", "cobble-half", "cobble"], pattern: "split-h", grout: "#e6dcc8", joint: 2, w: 120, h: 120 },
+      note: "Tape, 20.5 × 20.5 cm. The Half tiles carry the pattern on their lower half, so they make transitions between patterned and plain areas."
+    },
+
+    "mutina-dintorni": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Dintorni",
+      name: "Dintorni",
+      credit: "Inga Sempé",
+      material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
+      size: { w: 20.5, l: 20.5 },
+      colors: [
+        { id: "neve", name: "Neve", base: "#f0f1ec", tint: "#c9c4bf", line: "#a8a7a2", accent: "#cf9a55", dot: "#2b2b2b" },
+        { id: "sole", name: "Sole", base: "#c4cdd6", tint: "#f0efe9", line: "#4f71a6", accent: "#b07c5c", dot: "#2b2b2b" },
+        { id: "ombra", name: "Ombra", base: "#5d5a50", tint: "#dbd5c6", line: "#e0e1d6", accent: "#b07c5c", dot: "#f0f0ea" }
+      ],
+      decors: [
+        { id: "scala", name: "Scala", paint: "dintorni", motif: "scala" },
+        { id: "bandiere", name: "Bandiere", paint: "dintorni", motif: "bandiere" },
+        { id: "dama", name: "Dama", paint: "dintorni", motif: "dama" },
+        { id: "azzurro", name: "Azzurro (solid)", paint: "plain", color: "#abb7c0" },
+        { id: "terracotta", name: "Terracotta (solid)", paint: "plain", color: "#b47f5c" },
+        { id: "verde-chiaro", name: "Verde Chiaro (solid)", paint: "plain", color: "#cbcdba" },
+        { id: "verde-scuro", name: "Verde Scuro (solid)", paint: "plain", color: "#575d53" },
+        { id: "blu", name: "Blu (solid)", paint: "plain", color: "#2d4964" }
+      ],
+      defaults: { color: "sole", decors: ["scala"], grout: "#f2efe9", joint: 2, w: 120, h: 90 },
+      note: "Dintorni, 20.5 × 20.5 cm. The colour (Neve, Sole, Ombra) sets the patterned tiles; the solids keep their own colour. Isola, the ten illustrated tiles, isn't included."
     }
   };
   for (var id in tiles) TV.TILES[id] = tiles[id];
