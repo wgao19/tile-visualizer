@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tile Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=3">
+</head>
+<body>
+<div class="wrap">
+  <nav class="tabs" id="tabs" aria-label="Places"></nav>
+
+  <!-- Overview: one card per place -->
+  <main id="indexView" hidden>
+    <header class="title">
+      <div>
+        <h1>Tile selections</h1>
+        <p class="sub">The current pick for each place. Open one to change it.</p>
+      </div>
+      <button type="button" class="seg-btn share" id="shareIndex">Share</button>
+    </header>
+    <div class="cards" id="cards"></div>
+  </main>
+
+  <!-- One place -->
+  <main id="placeView" hidden>
+    <header class="title">
+      <div>
+        <h1 id="title"></h1>
+        <p class="sub" id="subtitle"></p>
+      </div>
+    </header>
+
+    <section class="stage" aria-label="Tile preview">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="cv" role="img" aria-label="Preview of the selected tiles with the chosen grout colour"></canvas>
+      </div>
+      <div class="readout">
+        <div class="facts" id="readout"></div>
+        <div class="actions">
+          <button type="button" class="seg-btn" id="reset">Reset</button>
+          <button type="button" class="seg-btn share" id="share">Share</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <section class="panel" aria-labelledby="gh">
+        <h2 id="gh">Grout colour</h2>
+        <div class="swatches" id="swatches"></div>
+        <div class="custom">
+          <input type="color" id="custom" value="#cdbfa6" aria-label="Custom grout colour">
+          <label for="custom">Custom colour</label>
+          <span class="hex" id="customHex"></span>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="lh">
+        <h2 id="lh">Tile and layout</h2>
+
+        <!-- strip kind -->
+        <div class="field" data-kind="strip">
+          <label id="tl">Tile colours (pick one or mix several)</label>
+          <div class="swatches" role="group" aria-labelledby="tl" id="tileSw"></div>
+          <div class="row"><button type="button" class="seg-btn" id="allTiles">Select all</button></div>
+        </div>
+        <div class="field" data-kind="strip" id="mixField">
+          <label id="ml">Mix pattern</label>
+          <div class="seg" role="group" aria-labelledby="ml" id="mixSeg"></div>
+        </div>
+        <div class="field" data-kind="strip">
+          <label id="ll">Layout</label>
+          <div class="seg" role="group" aria-labelledby="ll" id="layoutSeg"></div>
+        </div>
+        <div class="field" data-kind="strip">
+          <label id="al">Direction</label>
+          <div class="seg" role="group" aria-labelledby="al" id="angleSeg"></div>
+        </div>
+
+        <!-- decor kind -->
+        <div class="field" data-kind="decor">
+          <label id="cl">Colour (each shown as Dash and Dot)</label>
+          <div class="swatches decor-sw" role="group" aria-labelledby="cl" id="colorSw"></div>
+        </div>
+        <div class="field" data-kind="decor">
+          <label id="pl">Pattern</label>
+          <div class="seg" role="group" aria-labelledby="pl" id="patternSeg"></div>
+          <div class="row" id="swapRow"><button type="button" class="seg-btn" id="swap">Swap dash and dot</button></div>
+        </div>
+
+        <!-- shared -->
+        <div class="field">
+          <div class="top"><label for="joint">Grout joint</label><span id="jointOut"></span></div>
+          <input type="range" id="joint" min="1" max="8" step="0.5" value="3">
+        </div>
+
+        <div class="field" data-kind="strip">
+          <div class="top"><label for="wall">Wall width shown</label><span id="wallOut"></span></div>
+          <input type="range" id="wall" min="40" max="200" step="5" value="90">
+        </div>
+        <div class="field" data-kind="decor">
+          <label>Surface size</label>
+          <div class="dims">
+            <label class="num">Width <input type="number" id="dimW" min="15" max="600" step="1" inputmode="numeric"> cm</label>
+            <label class="num">Height <input type="number" id="dimH" min="15" max="300" step="1" inputmode="numeric"> cm</label>
+          </div>
+        </div>
+
+        <p class="note"><span id="productNote"></span> Tile colours are matched by eye from product photos, so screen colours will differ from the real tile. Check physical samples before ordering.</p>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="js/data.js?v=3"></script>
+<script src="js/shapes.js?v=3"></script>
+<script src="js/render.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
+</body>
+</html>
