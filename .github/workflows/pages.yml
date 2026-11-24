@@ -1,0 +1,25 @@
+# Publishes main to the root of the gh-pages branch, which GitHub Pages serves.
+# PR previews live under pr-preview/ on the same branch and are left alone here.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: deploy-site
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: .
+          branch: gh-pages
+          clean-exclude: pr-preview/
+          force: false
