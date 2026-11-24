@@ -61,9 +61,14 @@ All in `js/data.js`:
 - `js/shapes.js`: strip tile outlines
 - `js/app.js`: routing, state, controls, sharing
 
-## GitHub Pages
+## GitHub Pages and previews
 
-Settings → Pages → Deploy from a branch → pick the branch and `/ (root)`. `.nojekyll` is already there.
+Two workflows publish to the `gh-pages` branch, which Pages serves (Settings → Pages → Deploy from a branch → `gh-pages` / root):
+
+- `.github/workflows/pages.yml`: every push to `main` publishes the site at the root.
+- `.github/workflows/preview.yml`: every pull request is published at `<site>/pr-preview/pr-<number>/`, with the link commented on the PR. It is removed when the PR closes.
+
+Actions minutes are free for public repositories. `.nojekyll` is already there.
 
 ### Caching
 
