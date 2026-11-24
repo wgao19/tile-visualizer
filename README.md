@@ -64,3 +64,7 @@ All in `js/data.js`:
 ## GitHub Pages
 
 Settings → Pages → Deploy from a branch → pick the branch and `/ (root)`. `.nojekyll` is already there.
+
+### Caching
+
+GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=3`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**
