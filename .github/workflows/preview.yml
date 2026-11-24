@@ -17,8 +17,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Leave out dotfiles (.nojekyll, .github): the site root's .nojekyll already covers
+      # previews, and the removal step below doesn't delete hidden files.
+      - name: Stage the site
+        if: github.event.action != 'closed'
+        run: |
+          mkdir "$RUNNER_TEMP/site"
+          cp -R ./* "$RUNNER_TEMP/site/"
+          mv "$RUNNER_TEMP/site" _preview
+
       - uses: rossjrw/pr-preview-action@v1
         with:
-          source-dir: .
+          source-dir: _preview
           preview-branch: gh-pages
           umbrella-dir: pr-preview
+
+      # Delete preview folders left with no visible files, e.g. a lone .nojekyll from
+      # previews published before dotfiles were left out.
+      - name: Remove empty previews
+        if: github.event.action == 'closed'
+        run: |
+          git fetch origin gh-pages
+          git checkout -B gh-pages origin/gh-pages
+          for d in pr-preview/*/; do
+            [ -d "$d" ] || continue
+            if [ -z "$(find "$d" -type f ! -name '.*' -print -quit)" ]; then git rm -rq "$d"; fi
+          done
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "Remove empty PR previews"
+          # The site deploy may push to gh-pages at the same time; rebase and retry.
+          for i in 1 2 3; do
+            git push origin gh-pages && exit 0
+            sleep 5
+            git pull -q --rebase origin gh-pages
+          done
+          exit 1
