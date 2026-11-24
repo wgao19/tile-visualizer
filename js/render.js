@@ -1,5 +1,5 @@
 /*
- * Canvas rendering for both product kinds. Everything is drawn in centimetres
+ * Canvas rendering for both tile kinds (see js/kinds.js). Everything is drawn in centimetres
  * and scaled to the canvas, so the same code draws the main stage, the
  * overview cards and the colour swatches.
  */
@@ -50,7 +50,7 @@
     return { ctx: ctx, w: w, h: h };
   }
 
-  /* ---------- strip kind (Bottone) ---------- */
+  /* ---------- mix kind (Bottone, plain rectangles) ---------- */
   TV.drawStrip = function (cv, product, st) {
     var c = setup(cv);
     if (!c) return;
@@ -219,7 +219,5 @@
     ctx.restore();
   };
 
-  TV.draw = function (cv, product, st) {
-    return product.kind === "decor" ? TV.drawDecor(cv, product, st) : TV.drawStrip(cv, product, st);
-  };
+  TV.draw = function (cv, tile, st) { TV.KINDS[tile.kind].draw(cv, tile, st); };
 })();
