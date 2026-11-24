@@ -78,6 +78,8 @@
       if (n === 1) return sel[0];
       if (st.mix === "columns") return sel[((i % n) + n) % n];
       if (st.mix === "rows") return sel[((j % n) + n) % n];
+      // Neighbours always differ: a checkerboard with two colours, diagonal steps with more.
+      if (st.mix === "alt") return sel[(((i + j) % n) + n) % n];
       return sel[Math.floor(rnd(i + 7.3, j + 3.9) * n) % n];
     }
 

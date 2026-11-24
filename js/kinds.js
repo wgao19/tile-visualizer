@@ -43,7 +43,7 @@
 
   var LAYOUTS = [{ id: "straight", name: "Straight" }, { id: "drop", name: "Half drop" }];
   var ANGLES = [{ id: 0, name: "Vertical" }, { id: 90, name: "Horizontal" }, { id: 45, name: "Diagonal" }];
-  var MIXES = [{ id: "random", name: "Random" }, { id: "columns", name: "By strip" }, { id: "rows", name: "By row" }];
+  var MIXES = [{ id: "random", name: "Random" }, { id: "columns", name: "By strip" }, { id: "rows", name: "By row" }, { id: "alt", name: "Alternate" }];
   var PATTERNS = [
     { id: "dash", name: "All dash" },
     { id: "dot", name: "All dot" },
