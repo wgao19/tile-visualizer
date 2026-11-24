@@ -337,6 +337,7 @@
   function update() {
     syncers.forEach(function (f) { f(); });
     render();
+    drawSwatches(); // swatches can depend on the options (a decor drawn in the chosen colour and grout)
     changed();
   }
 
@@ -406,21 +407,29 @@
   /* Tile controls, built from the kind's control specs. */
   var CONTROL = {
     swatches: function (c, field) {
-      var box = make("div", "swatches" + (c.swatch ? " decor-sw" : (c.multi ? " tile-sw" : "")));
+      var box = make("div", "swatches" + (c.swatch ? (c.one ? " decor-sw one" : " decor-sw") : (c.multi ? " tile-sw" : "")));
       box.setAttribute("role", "group");
+      var buttons = [], lastGroup = null;
       c.items.forEach(function (it) {
+        if (c.grouped && it.group && it.group !== lastGroup) {
+          box.appendChild(make("div", "sw-group", it.group));
+          lastGroup = it.group;
+        }
         var b = make("button", "sw");
         b.type = "button";
         if (c.swatch) {
           var swc = make("canvas");
           b.appendChild(swc);
-          swatchDraws.push(function () { c.swatch(swc, it); });
+          swatchDraws.push(function () { c.swatch(swc, it, state); });
         } else {
           var dot = make("span", "dot");
           dot.style.background = it.tones ? toneStripes(it.tones) : it.color;
           b.appendChild(dot);
         }
-        b.appendChild(make("span", "nm", it.name));
+        // In a grouped list the group heading already names the colour, so show the rest.
+        var label = c.grouped && it.group && it.name.indexOf(it.group + " ") === 0 ? it.name.slice(it.group.length + 1) : it.name;
+        b.appendChild(make("span", "nm", label));
+        b.setAttribute("aria-label", it.name);
         b.addEventListener("click", function () {
           if (!c.multi) state[c.key] = it.id;
           else {
@@ -431,11 +440,11 @@
           update();
         });
         box.appendChild(b);
+        buttons.push(b);
       });
       field.appendChild(box);
-      var all;
       if (c.multi && c.selectAll && c.items.length > 1) {
-        all = make("button", "seg-btn", "Select all " + c.items.length);
+        var all = make("button", "seg-btn", "Select all " + c.items.length);
         all.type = "button";
         all.addEventListener("click", function () { state[c.key] = c.items.map(function (it) { return it.id; }); update(); });
         var row = make("div", "row");
@@ -443,7 +452,7 @@
         field.appendChild(row);
       }
       return function () {
-        Array.prototype.forEach.call(box.children, function (b, k) {
+        buttons.forEach(function (b, k) {
           var id = c.items[k].id;
           b.setAttribute("aria-pressed", String(c.multi ? state[c.key].indexOf(id) >= 0 : state[c.key] === id));
         });
@@ -464,6 +473,13 @@
           b.setAttribute("aria-pressed", String(c.items[k].id === state[c.key]));
         });
       };
+    },
+    action: function (c, field) {
+      var b = make("button", "seg-btn", c.label);
+      b.type = "button";
+      b.addEventListener("click", function () { c.run(state); update(); });
+      field.appendChild(b);
+      return function () {};
     },
     toggle: function (c, field) {
       var b = make("button", "seg-btn", c.label);
@@ -514,7 +530,7 @@
     swatchDraws = [];
     kindOf(tile).controls(tile).forEach(function (c, n) {
       var field = make("div", "field"), id = "ctl" + n;
-      if (c.type !== "toggle") {
+      if (c.type !== "toggle" && c.type !== "action") {
         var lab = make("label", null, c.label);
         lab.id = id + "l";
         if (c.type === "range") lab.htmlFor = id;

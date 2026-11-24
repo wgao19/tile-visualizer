@@ -17,10 +17,12 @@
  * Link keys used by the app itself: n (name), tile, g (grout), j (joint).
  *
  * Control specs:
- *   { type: "swatches", key, label, items, multi?, selectAll?, swatch?(canvas, item) }
+ *   { type: "swatches", key, label, items, multi?, selectAll?, one?, grouped?, swatch?(canvas, item, st) }
+ *                       grouped: items with a `group` get a heading per group
  *   { type: "seg",      key, label, items: [{ id, name }], show?(st) }
  *   { type: "toggle",   key, label, show?(st) }
  *   { type: "range",    key, label, min, max, step, unit }
+ *   { type: "action",   label, run(st), show?(st) }         a button that changes the options
  *   { type: "numbers",  label, fields: [{ key, label, min, max, unit }] }
  */
 (function () {
@@ -44,13 +46,37 @@
   var LAYOUTS = [{ id: "straight", name: "Straight" }, { id: "drop", name: "Half drop" }];
   var ANGLES = [{ id: 0, name: "Vertical" }, { id: 90, name: "Horizontal" }, { id: 45, name: "Diagonal" }];
   var MIXES = [{ id: "random", name: "Random" }, { id: "columns", name: "By strip" }, { id: "rows", name: "By row" }, { id: "alt", name: "Alternate" }];
+  /* How several decors are set out over a decor surface. */
   var PATTERNS = [
-    { id: "dash", name: "All dash" },
-    { id: "dot", name: "All dot" },
+    { id: "random", name: "Random" },
+    { id: "alt", name: "Alternate" },
     { id: "split-h", name: "Top / bottom" },
     { id: "split-v", name: "Left / right" },
-    { id: "alt", name: "Alternate" }
+    { id: "rows", name: "By row" },
+    { id: "columns", name: "By column" }
   ];
+  /* Square tiles whose decor isn't symmetric can be turned; a tile can opt out with `turn: false`. */
+  function turnable(tile) { return tile.size.w === tile.size.l && tile.turn !== false; }
+  var TURNS = [{ id: "none", name: "Same way" }, { id: "alt", name: "Alternate" }, { id: "random", name: "Random" }];
+
+  /* A decor tile's variations: every colour with every design, plus designs with a colour of
+     their own (Dintorni's solids, Tape's bases), each once. Each variation is one tile you can
+     order, and the unit an area picks. Grouped by colour for display. */
+  TV.decorVariants = function (tile) {
+    if (tile._variants) return tile._variants;
+    var out = [];
+    tile.colors.forEach(function (c) {
+      tile.decors.forEach(function (d) {
+        if (d.color) return;
+        out.push({ id: c.id + "-" + d.id, name: c.name + " " + d.name, group: c.name, col: c, decor: d });
+      });
+    });
+    tile.decors.forEach(function (d) {
+      if (d.color) out.push({ id: d.id, name: d.name, group: d.group || "Solids", col: { base: d.color }, decor: d });
+    });
+    Object.defineProperty(tile, "_variants", { value: out });
+    return out;
+  };
   /* Zoom range for the mix kind: up to five tile lengths across, never less than 2 m. */
   function wallRange(tile) {
     var longest = Math.max(tile.size.w, tile.size.l);
@@ -109,56 +135,68 @@
       draw: function (cv, tile, st) { TV.drawStrip(cv, tile, st); }
     },
 
-    /* One colour; each tile is Dash or Dot, set out in a pattern over a surface of a given size. */
+    /* Tiles that come in several designs as well as colours (Homage, Betty, Fringe, Tape, Dintorni).
+       An area picks any number of variations (one colour in one design each) and how to mix them.
+       Designs are drawn by js/painters.js. */
     decor: {
-      base: { color: null, pattern: "dash", swap: false, w: 240, h: 60 },
+      base: { variants: [], pattern: "random", turn: "none", w: 240, h: 60 },
       normalize: function (tile, st) {
-        if (!byId(tile.colors, st.color)) st.color = (tile.defaults && byId(tile.colors, tile.defaults.color) ? tile.defaults.color : tile.colors[0].id);
-        if (!byId(PATTERNS, st.pattern)) st.pattern = "dash";
-        st.swap = !!st.swap;
+        var all = TV.decorVariants(tile);
+        function valid(ids) {
+          return (ids || []).filter(function (id, i, a) { return a.indexOf(id) === i && byId(all, id); });
+        }
+        st.variants = valid(st.variants);
+        if (!st.variants.length) st.variants = valid(tile.defaults && tile.defaults.variants);
+        if (!st.variants.length) st.variants = [all[0].id];
+        if (!byId(PATTERNS, st.pattern)) st.pattern = "random";
+        if (!byId(TURNS, st.turn) || !turnable(tile)) st.turn = "none";
         if (!inRange(st.w, 15, 600)) st.w = 240;
         if (!inRange(st.h, 15, 300)) st.h = 60;
       },
       serialize: function (st) {
-        return [["c", st.color], ["p", st.pattern], ["s", st.swap ? 1 : 0], ["w", st.w], ["h", st.h]];
+        return [["v", st.variants.join(",")], ["p", st.pattern], ["r", st.turn], ["w", st.w], ["h", st.h]];
       },
       parse: function (p, tile, st) {
-        if (p.c) st.color = p.c;
+        if (p.v) st.variants = p.v.split(",");
         if (p.p) st.pattern = p.p;
-        if (p.s === "1" || p.s === "0") st.swap = p.s === "1";
+        // Older Homage links: c is the colour, p either one design or how to set out dash and dot.
+        if (!p.v && p.c) {
+          if (p.p === "dash" || p.p === "dot") st.variants = [p.c + "-" + p.p];
+          else if (/^(split-h|split-v|alt)$/.test(p.p || "")) {
+            st.variants = p.s === "1" ? [p.c + "-dot", p.c + "-dash"] : [p.c + "-dash", p.c + "-dot"];
+          }
+        }
+        if (p.r) st.turn = p.r;
         var w = parseFloat(p.w), h = parseFloat(p.h);
         if (inRange(w, 15, 600)) st.w = Math.round(w);
         if (inRange(h, 15, 300)) st.h = Math.round(h);
       },
       facts: function (tile, st) {
-        var L = TV.decorLayout(tile, st);
-        var a = st.swap ? "dot" : "dash", b = st.swap ? "dash" : "dot";
-        var pat = byId(PATTERNS, st.pattern).name;
-        if (st.pattern === "split-h") pat = "Top " + a + ", bottom " + b;
-        if (st.pattern === "split-v") pat = "Left " + a + ", right " + b;
-        if (st.pattern === "alt") pat = "Alternate, starting " + a;
-        var mix = [];
-        if (L.counts.dash) mix.push(L.counts.dash + " dash");
-        if (L.counts.dot) mix.push(L.counts.dot + " dot");
-        return [["Colour", byId(tile.colors, st.color).name], ["Pattern", pat]]
-          .concat(groutFacts(tile, st))
-          .concat([
-            ["Surface", st.w + " × " + st.h + " cm"],
-            ["Tiles", L.total + " (" + mix.join(", ") + (L.cut ? "; " + L.cut + " cut" : "") + ")"]
-          ]);
+        var L = TV.decorLayout(tile, st), all = TV.decorVariants(tile);
+        var names = st.variants.map(function (id) { return byId(all, id).name; });
+        var text = names.join(" + ");
+        if (names.length > 1) text += ", " + byId(PATTERNS, st.pattern).name.toLowerCase();
+        var f = [[names.length > 1 ? "Variations" : "Variation", text]];
+        if (st.turn !== "none") f.push(["Rotation", byId(TURNS, st.turn).name.toLowerCase()]);
+        var mix = names.length > 1 ? st.variants.map(function (id) { return L.counts[id] + " " + byId(all, id).name; }) : [];
+        var count = L.total + (mix.length || L.cut ? " (" + mix.join(", ") + (L.cut ? (mix.length ? "; " : "") + L.cut + " cut" : "") + ")" : "");
+        return f.concat(groutFacts(tile, st)).concat([["Surface", st.w + " × " + st.h + " cm"], ["Tiles", count]]);
       },
       controls: function (tile) {
-        return [
-          { type: "swatches", key: "color", label: "Colour (each shown as Dash and Dot)", items: tile.colors,
-            swatch: function (cv, c) { TV.drawDecorSwatch(cv, tile, c); } },
-          { type: "seg", key: "pattern", label: "Pattern", items: PATTERNS },
-          { type: "toggle", key: "swap", label: "Swap dash and dot",
-            show: function (st) { return st.pattern !== "dash" && st.pattern !== "dot"; } },
-          { type: "numbers", label: "Surface size", fields: [
-            { key: "w", label: "Width", min: 15, max: 600, unit: "cm" },
-            { key: "h", label: "Height", min: 15, max: 300, unit: "cm" }
-          ] }
+        var c = [
+          { type: "swatches", key: "variants", label: "Variations (pick one or mix several)", items: TV.decorVariants(tile),
+            multi: true, one: true, grouped: true,
+            swatch: function (cv, v, st) { TV.drawDecorSwatch(cv, tile, [v], st.grout); } },
+          { type: "seg", key: "pattern", label: "How to mix them", items: PATTERNS, show: function (st) { return st.variants.length > 1; } },
+          { type: "action", label: "Reverse order", run: function (st) { st.variants.reverse(); },
+            show: function (st) { return st.variants.length > 1 && st.pattern !== "random"; } }
         ];
+        if (turnable(tile)) c.push({ type: "seg", key: "turn", label: "Rotation", items: TURNS });
+        c.push({ type: "numbers", label: "Surface size", fields: [
+          { key: "w", label: "Width", min: 15, max: 600, unit: "cm" },
+          { key: "h", label: "Height", min: 15, max: 300, unit: "cm" }
+        ] });
+        return c;
       },
       draw: function (cv, tile, st) { TV.drawDecor(cv, tile, st); },
       aspect: function (st) { return st.w / st.h; }

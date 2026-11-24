@@ -91,6 +91,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 /* Decor colour swatches show a Dash and a Dot tile */
 .decor-sw { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
 .decor-sw canvas { width: 100%; height: 40px; }
+.decor-sw.one { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+.decor-sw.one canvas { height: 56px; }
+.sw-group { grid-column: 1 / -1; margin-top: 6px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.sw-group:first-child { margin-top: 0; }
 .sw canvas { border-radius: 3px; }
 .sw[aria-pressed="true"] canvas { outline: 2px solid var(--accent); outline-offset: 3px; }
 
