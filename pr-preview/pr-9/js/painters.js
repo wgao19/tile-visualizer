@@ -1,18 +1,18 @@
 /*
  * Decor painters: how one tile face of the "decor" kind is drawn.
  *
- * A tile's `decors` list names a painter for each decor, plus that decor's own
- * parameters (see js/tiles/*.js). A painter draws one tile in the tile's own
- * coordinates, in centimetres: (0, 0) to (W, L), where W × L is the tile's nominal
+ * A tile's `decors` list (its designs) names a painter for each design, plus that
+ * design's own parameters (see js/tiles/*.js). A painter draws one tile in the tile's
+ * own coordinates, in centimetres: (0, 0) to (W, L), where W × L is the tile's nominal
  * size before any turn. The renderer has already moved, turned and clipped the
  * context, so painters never need to know where the tile sits on the wall.
  *
  *   painter(ctx, W, L, col, decor, env)
- *     col     the area's colour entry (its roles: base, motif, line… vary by tile)
- *     decor   the decor entry, with its parameters
- *     env     { shade(hex) → tile-varied colour, noise, lw (one pixel), grout, seed(a, b) → 0..1 }
+ *     col     the variation's colour entry (its roles: base, motif, line… vary by tile)
+ *     decor   the design entry, with its parameters
+ *     env     { shade(hex) → tile-varied colour, gloss(x, y, w, h), lw (one pixel), grout, seed(a, b) → 0..1 }
  *
- * Painters only paint the face. Noise, edge lines and the gloss are added by the renderer.
+ * Painters only paint the face. Noise and edge lines are added by the renderer.
  */
 (function () {
   var TV = (window.TileViz = window.TileViz || {});
@@ -57,19 +57,6 @@
     ctx.closePath();
   }
 
-  /* A repeating cell, cached as a pattern, for very fine textures (Pico's dot grid). */
-  var cellCache = {};
-  function cellPattern(ctx, key, px, draw) {
-    var cv = cellCache[key];
-    if (!cv) {
-      cv = document.createElement("canvas");
-      cv.width = cv.height = px;
-      draw(cv.getContext("2d"), px);
-      cellCache[key] = cv;
-    }
-    return ctx.createPattern(cv, "repeat");
-  }
-
   TV.PAINTERS = {
     /* One flat colour: the decor's own colour if it has one, else the colour's base. */
     plain: function (ctx, W, L, col, d, env) {
@@ -95,24 +82,6 @@
       ctx.strokeStyle = "rgba(0,0,0,0.14)";
       if (d.variant === "dash") ctx.strokeRect(b, b, W - 2 * b, L - 2 * b);
       for (k = 0; k < 4; k++) ctx.strokeRect(corners[k][0], corners[k][1], b, b);
-    },
-
-    /* Aurore: a grid of thin strokes. `cols` verticals, `rows` main horizontals, `minor` adds
-       horizontals halfway between in the vertical colour. */
-    grid: function (ctx, W, L, col, d, env) {
-      rect(ctx, 0, 0, W, L, env.shade(col.base));
-      var w = d.stroke || 0.14, k;
-      ctx.lineCap = "butt";
-      ctx.lineWidth = w;
-      ctx.strokeStyle = col.cross;
-      ctx.beginPath();
-      if (d.minor) for (k = 0; k < d.rows; k++) line(ctx, 0, (k + 0.5) * L / d.rows, W, (k + 0.5) * L / d.rows);
-      for (k = 1; k < d.cols; k++) line(ctx, k * W / d.cols, 0, k * W / d.cols, L);
-      ctx.stroke();
-      ctx.strokeStyle = col.line;
-      ctx.beginPath();
-      for (k = 1; k < d.rows; k++) line(ctx, 0, k * L / d.rows, W, k * L / d.rows);
-      ctx.stroke();
     },
 
     /* Betty: a plus, a T, a frame, or the frame and plus together ("set"). */
@@ -155,90 +124,6 @@
         rect(ctx, x - gw / 2, 0, gw * 0.3, L, "rgba(0,0,0,0.28)");
         rect(ctx, x + gw / 2, 0, gw * 0.35, L, "rgba(255,255,255,0.18)");
       }
-    },
-
-    /* Chamotte: glossy, uneven glaze; Linea has raised ridges, Quadra breaks them a third of the way down. */
-    chamotte: function (ctx, W, L, col, d, env) {
-      rect(ctx, 0, 0, W, L, env.shade(col.base));
-      var k, s = env.seed;
-      // Mottled glaze: soft light and dark pools.
-      for (k = 0; k < 10; k++) {
-        var x = s(k, 1) * W, y = s(k, 2) * L, rr = (0.12 + s(k, 3) * 0.18) * W;
-        var g = ctx.createRadialGradient(x, y, 0, x, y, rr);
-        var light = s(k, 4) > 0.5;
-        g.addColorStop(0, light ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)");
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, W, L);
-      }
-      if (!d.ridges) return;
-      var n = d.ridges, cut = d.quadra ? L * 0.3 : 0;
-      function ridges(y0, y1, off) {
-        for (var j = 0; j < n; j++) {
-          var cx = (j + 0.5 + off) * W / n;
-          if (cx <= 0 || cx >= W) continue;
-          rect(ctx, cx - W / n * 0.18, y0, W / n * 0.16, y1 - y0, "rgba(255,255,255,0.35)");
-          rect(ctx, cx, y0, W / n * 0.2, y1 - y0, "rgba(0,0,0,0.3)");
-        }
-      }
-      if (cut) {
-        ridges(0, cut - 0.3, 0.5);
-        rect(ctx, 0, cut - 0.3, W, 0.3, "rgba(0,0,0,0.35)");
-      }
-      ridges(cut, L, 0);
-    },
-
-    /* Raised ("up") or sunken ("down") dots. `count` dots along the length, or a grid every `pitch` cm. */
-    dots: function (ctx, W, L, col, d, env) {
-      rect(ctx, 0, 0, W, L, env.shade(col.base));
-      var dot = d.color || null;
-      function one(x, y, r) {
-        if (d.mode === "up") {
-          var g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
-          g.addColorStop(0, "rgba(255,255,255,0.55)");
-          g.addColorStop(0.6, dot || "rgba(255,255,255,0.05)");
-          g.addColorStop(1, "rgba(0,0,0,0.3)");
-          ctx.fillStyle = g;
-          ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.fill();
-        } else {
-          ctx.lineWidth = r * 0.28;
-          ctx.strokeStyle = "rgba(0,0,0,0.28)";
-          ctx.beginPath(); ctx.arc(x, y, r * 0.8, PI * 0.75, PI * 1.75); ctx.stroke();
-          ctx.strokeStyle = "rgba(255,255,255,0.4)";
-          ctx.beginPath(); ctx.arc(x, y, r * 0.8, PI * 1.75, PI * 2.75); ctx.stroke();
-          if (dot) { ctx.fillStyle = dot; ctx.beginPath(); ctx.arc(x, y, r * 0.45, 0, 2 * PI); ctx.fill(); }
-        }
-      }
-      if (d.count) {
-        var long = Math.max(W, L), short = Math.min(W, L), r = d.radius || short * 0.15;
-        for (var k = 0; k < d.count; k++) {
-          var t = (k + 0.5) * long / d.count;
-          if (W >= L) one(t, L / 2, r); else one(W / 2, t, r);
-        }
-        return;
-      }
-      // Fine grid. When a dot would be under a few screen pixels it can't be drawn without
-      // moiré, so the grid becomes the even tint it reads as from that distance.
-      if (d.pitch / env.lw < 5) {
-        rect(ctx, 0, 0, W, L, d.mode === "up" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)");
-        if (dot) { ctx.globalAlpha = 0.12; rect(ctx, 0, 0, W, L, dot); ctx.globalAlpha = 1; }
-        return;
-      }
-      // Otherwise one cached cell repeated as a pattern.
-      var px = 24, key = "dots|" + d.mode + "|" + (dot || "");
-      var pat = cellPattern(ctx, key, px, function (g, n) {
-        var c = n / 2, rr = n * 0.22;
-        if (d.mode === "up") {
-          g.fillStyle = "rgba(255,255,255,0.35)"; g.beginPath(); g.arc(c - 1, c - 1, rr, 0, 2 * PI); g.fill();
-          g.fillStyle = "rgba(0,0,0,0.18)"; g.beginPath(); g.arc(c + 1, c + 1, rr, 0, 2 * PI); g.fill();
-        } else {
-          g.fillStyle = "rgba(0,0,0,0.22)"; g.beginPath(); g.arc(c, c, rr, 0, 2 * PI); g.fill();
-        }
-        if (dot) { g.fillStyle = dot; g.beginPath(); g.arc(c, c, rr * 0.7, 0, 2 * PI); g.fill(); }
-      });
-      if (pat.setTransform) pat.setTransform(new DOMMatrix().scale(d.pitch / px));
-      ctx.fillStyle = pat;
-      ctx.fillRect(0, 0, W, L);
     },
 
     /* Tape: cobbles, grainy stitches, knit mesh or zigzag bands, on the whole tile or its lower half. */

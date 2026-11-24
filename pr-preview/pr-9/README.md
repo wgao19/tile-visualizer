@@ -22,14 +22,14 @@ Foyer (Bottone L), kitchen backsplash and island front (Homage to the Square):
 
 ## Tile library
 
-Brand tiles live in `js/tiles/<brand>.js` (so far `mutina.js`, 30 tiles); generic ones in `js/data.js`. All add themselves to `TILES`. **A new tile is a data entry only**, as long as it uses an existing kind. A new brand file also needs a `<script>` line in `index.html`.
+Brand tiles live in `js/tiles/<brand>.js` (so far `mutina.js`, 24 tiles); generic ones in `js/data.js`. All add themselves to `TILES`. **A new tile is a data entry only**, as long as it uses an existing kind. A new brand file also needs a `<script>` line in `index.html`.
 
 **A tile is one size of one product.** Colours, finishes or tones of the same size that are meant to be mixed on one surface share an entry (DIN's matt and glossy colours, Diarama's tone sets). Other sizes are separate tiles (Bottone S and Bottone L, the five Kosei sizes).
 
 | kind | example | options |
 | --- | --- | --- |
 | `mix` | Bottone, DIN, Diarama, Kosei, Mews, Otto, Teknotessere, Time, Plain rectangle | several colours mixed, mix pattern, layout, direction, zoom |
-| `decor` | Homage to the Square, Aurore, Betty, Chamotte, Dintorni, Fringe, Pico, Punto, Tape | one colour; one or more decors set out at random, alternating, top/bottom, left/right, by row or by column (order reversible); turn tiles (square tiles); direction (other tiles); surface width × height; tile counts per decor |
+| `decor` | Homage to the Square, Betty, Dintorni, Fringe, Tape | one or more variations (a colour in a design), mixed at random, alternating, top/bottom, left/right, by row or by column (order reversible); rotation; surface width × height; tile counts per variation |
 
 Optional tile fields:
 
@@ -45,11 +45,13 @@ Mutina colours were sampled from the product photos on mutina.it: the median of 
 
 ### Decor tiles
 
-A `decor` tile lists its `colors` and its `decors`. Each decor names a painter from `js/painters.js` and that painter's parameters, e.g. `{ id: "grid-s", name: "Grid S", paint: "grid", cols: 8, rows: 8, minor: true }`. A colour holds whatever colours its painters use (`base`, `motif`, `line`…); a decor with its own `color` ignores the area's colour (Dintorni's solids). Painters so far: `plain`, `homage`, `grid`, `betty`, `fringe`, `chamotte`, `dots`, `tape`, `dintorni`. Set `turn: false` on a square tile whose decors look the same turned. A colour with `gloss: true` gets a glaze highlight.
+A `decor` tile lists its `colors` and its designs (`decors`). Each design names a painter from `js/painters.js` and that painter's parameters, e.g. `{ id: "bold", name: "Bold", paint: "fringe", segments: 8 }`. A colour holds whatever colours its painters use (`base`, `motif`, `line`…).
+
+**Areas pick variations, not colours and designs separately.** The variations are every colour in every design (id `<colour>-<design>`, e.g. `blush-t`), plus designs that carry their own `color`, which appear once under their `group` (Dintorni's solids, Tape's Base White and Base Black). The picker lists them grouped by colour. Painters so far: `plain`, `homage`, `betty`, `fringe`, `tape`, `dintorni`. Set `turn: false` on a tile whose designs look the same turned.
 
 A new decor family is a painter (a function that draws one tile in its own centimetre coordinates) plus data. Everything else (layout, turning, counts, swatches, links) is shared.
 
-Decor surfaces are drawn whole, tiled from the top-left corner, so the split falls on a tile joint and the readout shows how many Dash and Dot tiles you need (and how many are cut).
+Decor surfaces are drawn whole, tiled from the top-left corner, so the split falls on a tile joint and the readout shows how many of each variation you need (and how many are cut).
 
 ### Adding a kind
 
@@ -70,7 +72,7 @@ Each `<area>` is an encoded query:
 | `g` | grout hex, no `#` |
 | `j` | joint mm (1–8) |
 | `t`, `m`, `l`, `a`, `w` | mix: colour ids (comma-separated), `random`/`columns`/`rows`/`alt`, `straight`/`drop`, `0`/`90`/`45`, wall width shown in cm (20–600, capped per tile) |
-| `c`, `d`, `p`, `r`, `o`, `w`, `h` | decor: colour id, decor ids (comma-separated, in order), `random`/`alt`/`split-h`/`split-v`/`rows`/`columns`, turn `none`/`alt`/`random`, direction `v`/`h`, surface width cm (15–600), height cm (15–300). Older Homage links (`p=dash`, `p=alt&s=1`…) still open. |
+| `v`, `p`, `r`, `w`, `h` | decor: variation ids (comma-separated, in order), `random`/`alt`/`split-h`/`split-v`/`rows`/`columns`, rotation `none`/`alt`/`random`, surface width cm (15–600), height cm (15–300). Older Homage links (`c=sea&p=dash`, `p=alt&s=1`…) still open. |
 
 Invalid values fall back to the tile's defaults; areas with an unknown tile are skipped. Links from the earlier fixed-places version (`#/foyer?…`, `#/?foyer=…&island-front=…`, `#foyer?…`) still open.
 
@@ -79,7 +81,7 @@ Invalid values fall back to the tile's defaults; areas with an unknown tile are 
 - `js/data.js`: grout palette and generic tiles
 - `js/tiles/mutina.js`: Mutina tiles
 - `js/kinds.js`: per-kind options, controls and link keys
-- `js/painters.js`: decor painters (one tile face each)
+- `js/painters.js`: design painters for decor tiles (one tile face each)
 - `js/render.js`: canvas drawing
 - `js/shapes.js`: tile outlines for the mix kind
 - `js/app.js`: areas, routing, controls, sharing
@@ -95,4 +97,4 @@ Actions minutes are free for public repositories. `.nojekyll` is already there.
 
 ### Caching
 
-GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=8`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**
+GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=9`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**

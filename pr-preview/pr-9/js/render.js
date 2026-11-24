@@ -117,23 +117,11 @@
     ctx.restore();
   };
 
-  /* ---------- decor kind (Homage to the Square, Aurore, Betty, Fringe, Tape…) ---------- */
+  /* ---------- decor kind (Homage to the Square, Betty, Fringe, Tape, Dintorni) ---------- */
 
-  /* Tile footprint on the wall: the nominal size, swapped when a non-square tile is turned. */
-  function footprint(tile, st) {
-    var w = tile.size.w, l = tile.size.l;
-    return TV.decorTurned(tile, st) ? { w: l, h: w } : { w: w, h: l };
-  }
-  /* Is a non-square tile laid the other way round from how its size is given? */
-  TV.decorTurned = function (tile, st) {
-    if (tile.size.w === tile.size.l) return false;
-    var longVertical = tile.size.l > tile.size.w;
-    return (st.orient === "h") === longVertical;
-  };
-
-  /* Which of the selected decors (an index into st.decors) goes in grid cell (i, j). */
+  /* Which of the selected variations (an index into st.variants) goes in grid cell (i, j). */
   TV.decorIndex = function (st, i, j, cols, rows) {
-    var n = st.decors.length;
+    var n = st.variants.length;
     if (n <= 1) return 0;
     switch (st.pattern) {
       case "split-h": return Math.min(n - 1, Math.floor(j * n / rows));
@@ -153,17 +141,17 @@
 
   /* Grid of tiles laid from the top-left corner; partial tiles on the right/bottom are cuts. */
   TV.decorLayout = function (tile, st) {
-    var fp = footprint(tile, st), g = st.joint / 10, px = fp.w + g, py = fp.h + g;
+    var tw = tile.size.w, th = tile.size.l, g = st.joint / 10, px = tw + g, py = th + g;
     var cols = Math.max(1, Math.ceil(st.w / px)), rows = Math.max(1, Math.ceil(st.h / py));
     var counts = {}, cut = 0;
-    st.decors.forEach(function (id) { counts[id] = 0; });
+    st.variants.forEach(function (id) { counts[id] = 0; });
     for (var i = 0; i < cols; i++) {
       for (var j = 0; j < rows; j++) {
-        counts[st.decors[TV.decorIndex(st, i, j, cols, rows)]]++;
-        if (i * px + fp.w > st.w + 1e-6 || j * py + fp.h > st.h + 1e-6) cut++;
+        counts[st.variants[TV.decorIndex(st, i, j, cols, rows)]]++;
+        if (i * px + tw > st.w + 1e-6 || j * py + th > st.h + 1e-6) cut++;
       }
     }
-    return { tw: fp.w, th: fp.h, px: px, py: py, cols: cols, rows: rows, counts: counts, cut: cut, total: cols * rows };
+    return { tw: tw, th: th, px: px, py: py, cols: cols, rows: rows, counts: counts, cut: cut, total: cols * rows };
   };
 
   function gloss(ctx, x, y, w, h) {
@@ -175,21 +163,20 @@
     ctx.fillRect(x, y, w, h);
   }
 
-  /* Paint one tile whose footprint's top-left is (x, y). `quarter` is extra quarter turns,
-     `turned` swaps a non-square tile's sides; `lw` is one device pixel in current units. */
-  TV.paintDecor = function (ctx, tile, col, decor, x, y, quarter, turned, opts) {
+  /* Paint one tile (a variation: colour + design) with its top-left at (x, y), turned by
+     `quarter` quarter turns. opts: f (shade), noise, lw (one device pixel), grout, seed. */
+  TV.paintDecor = function (ctx, tile, variant, x, y, quarter, opts) {
     var W = tile.size.w, L = tile.size.l;
-    var fw = turned ? L : W, fh = turned ? W : L;
     var f = opts.f == null ? 1 : opts.f, seedBase = opts.seed || 0;
-    var painter = TV.PAINTERS[decor.paint] || TV.PAINTERS.plain;
+    var painter = TV.PAINTERS[variant.decor.paint] || TV.PAINTERS.plain;
     ctx.save();
-    ctx.translate(x + fw / 2, y + fh / 2);
-    ctx.rotate(((quarter || 0) + (turned ? 1 : 0)) * Math.PI / 2);
+    ctx.translate(x + W / 2, y + L / 2);
+    ctx.rotate((quarter || 0) * Math.PI / 2);
     ctx.translate(-W / 2, -L / 2);
     ctx.beginPath();
     ctx.rect(0, 0, W, L);
     ctx.clip();
-    painter(ctx, W, L, col, decor, {
+    painter(ctx, W, L, variant.col, variant.decor, {
       shade: function (hex) { return shade(hex, f); },
       gloss: function (gx, gy, gw, gh) { gloss(ctx, gx, gy, gw, gh); },
       lw: opts.lw,
@@ -197,18 +184,15 @@
       seed: function (a, b) { return rnd(a + seedBase * 0.37, b + seedBase * 1.91); }
     });
     if (opts.noise) { ctx.fillStyle = opts.noise; ctx.fillRect(0, 0, W, L); }
-    if (col.gloss) gloss(ctx, 0, 0, W, L);
     ctx.restore();
     ctx.lineWidth = opts.lw;
     ctx.strokeStyle = "rgba(0,0,0,0.22)";
-    ctx.strokeRect(x, y, fw, fh);
+    ctx.strokeRect(x, y, W, L);
   };
 
-  function colourOf(tile, st) {
-    return tile.colors.filter(function (x) { return x.id === st.color; })[0] || tile.colors[0];
-  }
-  function decorById(tile, id) {
-    return tile.decors.filter(function (x) { return x.id === id; })[0] || tile.decors[0];
+  function variantById(tile, id) {
+    var all = TV.decorVariants(tile);
+    return all.filter(function (v) { return v.id === id; })[0] || all[0];
   }
 
   /* Draws the whole wall, fitted and centred in the canvas. Returns the layout. */
@@ -216,7 +200,7 @@
     var c = setup(cv);
     var L = TV.decorLayout(tile, st);
     if (!c) return L;
-    var ctx = c.ctx, col = colourOf(tile, st), turned = TV.decorTurned(tile, st);
+    var ctx = c.ctx;
     var s = Math.min(c.w / st.w, c.h / st.h);
     var ox = (c.w - st.w * s) / 2, oy = (c.h - st.h * s) / 2;
 
@@ -235,8 +219,8 @@
 
     for (var i = 0; i < L.cols; i++) {
       for (var j = 0; j < L.rows; j++) {
-        var decor = decorById(tile, st.decors[TV.decorIndex(st, i, j, L.cols, L.rows)]);
-        TV.paintDecor(ctx, tile, col, decor, i * L.px, j * L.py, TV.decorQuarter(st, i, j), turned, {
+        var v = variantById(tile, st.variants[TV.decorIndex(st, i, j, L.cols, L.rows)]);
+        TV.paintDecor(ctx, tile, v, i * L.px, j * L.py, TV.decorQuarter(st, i, j), {
           f: 0.975 + rnd(i, j) * 0.05, noise: pat, lw: 1 / s, grout: st.grout, seed: i * 31 + j
         });
       }
@@ -245,20 +229,19 @@
     return L;
   };
 
-  /* Small swatch: the given decors (default: the tile's first two) side by side in one colour. */
-  TV.drawDecorSwatch = function (cv, tile, col, decorIds, grout) {
+  /* Small swatch: the given variations side by side. */
+  TV.drawDecorSwatch = function (cv, tile, variants, grout) {
     var c = setup(cv);
     if (!c) return;
-    var ids = decorIds || tile.decors.slice(0, 2).map(function (d) { return d.id; });
-    var ctx = c.ctx, W = tile.size.w, L = tile.size.l, gap = Math.max(W, L) * 0.08, n = ids.length;
+    var ctx = c.ctx, W = tile.size.w, L = tile.size.l, gap = W * 0.08, n = variants.length;
     var totalW = n * W + (n - 1) * gap;
     var s = Math.min(c.w / totalW, c.h / L);
     ctx.clearRect(0, 0, c.w, c.h);
     ctx.save();
     ctx.translate((c.w - totalW * s) / 2, (c.h - L * s) / 2);
     ctx.scale(s, s);
-    ids.forEach(function (id, k) {
-      TV.paintDecor(ctx, tile, col, decorById(tile, id), k * (W + gap), 0, 0, false, { lw: 1 / s, grout: grout || "#cdbfa6", seed: k });
+    variants.forEach(function (v, k) {
+      TV.paintDecor(ctx, tile, v, k * (W + gap), 0, 0, { lw: 1 / s, grout: grout || "#cdbfa6", seed: k });
     });
     ctx.restore();
   };
