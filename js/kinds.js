@@ -43,7 +43,12 @@
   }
   TV.util = { byId: byId, inRange: inRange, groutName: groutName };
 
-  var LAYOUTS = [{ id: "straight", name: "Straight" }, { id: "drop", name: "Half drop" }];
+  var LAYOUTS = [
+    { id: "straight", name: "Straight" },
+    { id: "drop", name: "Half drop" },
+    { id: "herringbone", name: "Herringbone" },
+    { id: "chevron", name: "Chevron" }
+  ];
   var ANGLES = [{ id: 0, name: "Vertical" }, { id: 90, name: "Horizontal" }, { id: 45, name: "Diagonal" }];
   var MIXES = [{ id: "random", name: "Random" }, { id: "columns", name: "By strip" }, { id: "rows", name: "By row" }, { id: "alt", name: "Alternate" }];
   /* How several decors are set out over a decor surface. */

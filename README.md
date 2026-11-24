@@ -22,13 +22,13 @@ Foyer (Bottone L), kitchen backsplash and island front (Homage to the Square):
 
 ## Tile library
 
-Brand tiles live in `js/tiles/<brand>.js` (so far `mutina.js`, 24 tiles); generic ones in `js/data.js`. All add themselves to `TILES`. **A new tile is a data entry only**, as long as it uses an existing kind. A new brand file also needs a `<script>` line in `index.html`.
+Brand tiles live in `js/tiles/<brand>.js` (so far `mutina.js`, 29 tiles); generic ones in `js/data.js`. All add themselves to `TILES`. **A new tile is a data entry only**, as long as it uses an existing kind. A new brand file also needs a `<script>` line in `index.html`.
 
 **A tile is one size of one product.** Colours, finishes or tones of the same size that are meant to be mixed on one surface share an entry (DIN's matt and glossy colours, Diarama's tone sets). Other sizes are separate tiles (Bottone S and Bottone L, the five Kosei sizes).
 
 | kind | example | options |
 | --- | --- | --- |
-| `mix` | Bottone, DIN, Diarama, Kosei, Mews, Otto, Teknotessere, Time, Plain rectangle | several colours mixed, mix pattern, layout, direction, zoom |
+| `mix` | Bottone, Osso, DIN, Diarama, Kosei, Mews, Otto, Teknotessere, Time, Plain rectangle | several colours mixed, mix pattern, layout (straight, half drop, herringbone, chevron: whichever the tile lists), direction, zoom |
 | `decor` | Homage to the Square, Betty, Dintorni, Fringe, Tape | one or more variations (a colour in a design), mixed at random, alternating, top/bottom, left/right, by row or by column (order reversible); rotation; surface width × height; tile counts per variation |
 
 Optional tile fields:
@@ -36,7 +36,8 @@ Optional tile fields:
 - `collection`: the brand's product family, e.g. "Osso & Bottone". A label only: shown on the tile, searched, and used to sort tiles within a brand.
 - `defaults`: starting options when an area picks the tile (including `grout` and `joint`).
 - `grouts`: grout colours suggested for this tile, `[{ name, c }]`. They show above the shared palette as "Suggested for this tile"; any colour can still be picked.
-- `shape` (mix): an outline from `js/shapes.js` (`rect`, `notched-strip`).
+- `shape` (mix): an outline from `js/shapes.js` (`rect`, `notched-strip` for Bottone, `concave-strip` for Osso).
+- `layouts` (mix): which of `straight`, `drop`, `herringbone`, `chevron` the tile can be laid in. Herringbone works for any length/width ratio. Chevron tiles are parallelograms meeting in a V; `chevronAngle` sets the cut (default 45°, estimated for Kosei and Mews).
 - `tones` (mix, per colour): `[{ c, w }]` for products that vary tile by tile. Each tile gets one tone, in proportion to the weights `w`.
 
 The mix kind's zoom ("wall width shown") goes up to five tile lengths across, at least 2 m and at most 6 m.
@@ -71,7 +72,7 @@ Each `<area>` is an encoded query:
 | `tile` | tile id from `TILES` |
 | `g` | grout hex, no `#` |
 | `j` | joint mm (1–8) |
-| `t`, `m`, `l`, `a`, `w` | mix: colour ids (comma-separated), `random`/`columns`/`rows`/`alt`, `straight`/`drop`, `0`/`90`/`45`, wall width shown in cm (20–600, capped per tile) |
+| `t`, `m`, `l`, `a`, `w` | mix: colour ids (comma-separated), `random`/`columns`/`rows`/`alt`, `straight`/`drop`/`herringbone`/`chevron`, `0`/`90`/`45`, wall width shown in cm (20–600, capped per tile) |
 | `v`, `p`, `r`, `w`, `h` | decor: variation ids (comma-separated, in order), `random`/`alt`/`split-h`/`split-v`/`rows`/`columns`, rotation `none`/`alt`/`random`, surface width cm (15–600), height cm (15–300). Older Homage links (`c=sea&p=dash`, `p=alt&s=1`…) still open. |
 
 Invalid values fall back to the tile's defaults; areas with an unknown tile are skipped. Links from the earlier fixed-places version (`#/foyer?…`, `#/?foyer=…&island-front=…`, `#foyer?…`) still open.
@@ -97,4 +98,4 @@ Actions minutes are free for public repositories. `.nojekyll` is already there.
 
 ### Caching
 
-GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=10`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**
+GitHub Pages lets browsers cache files for about 10 minutes. `index.html` links its CSS and JS with a version tag (`?v=11`) so a new page never loads with old scripts. **When you change any file in `css/` or `js/`, bump that number on every link in `index.html`.**

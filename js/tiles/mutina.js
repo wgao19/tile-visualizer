@@ -57,6 +57,50 @@
       note: "Bottone S, nominal 3 × 27.5 cm. The cut-outs form circles where two pieces meet with a 4 mm joint."
     },
 
+    "mutina-osso-l": {
+      kind: "mix",
+      brand: "Mutina",
+      collection: "Osso & Bottone",
+      url: "https://www.mutina.it/en/collection/osso-bottone-by-ronan-bouroullec/osso-bottone-by-ronan-bouroullec",
+      name: "Osso L",
+      credit: "Ronan Bouroullec, 2024",
+      material: "Unglazed full-body porcelain stoneware, 10 mm",
+      size: { w: 7.5, l: 23.1 },
+      shape: { type: "concave-strip", waist: 0.88 },
+      layouts: ["straight", "drop"],
+      colors: [
+        { id: "sabbia", name: "Sabbia", color: "#d7c4ac" },
+        { id: "rosso", name: "Rosso", color: "#b27e71" },
+        { id: "grigio", name: "Grigio", color: "#94908b" },
+        { id: "verde", name: "Verde", color: "#969785" },
+        { id: "blu", name: "Blu", color: "#9fabaf" }
+      ],
+      defaults: { tiles: ["sabbia"], grout: "#cdbfa6", joint: 3, wall: 90 },
+      note: "Osso L, nominal 7.5 × 23.1 cm. The long sides curve inward, so the joints between pieces open into narrow lenses."
+    },
+
+    "mutina-osso-s": {
+      kind: "mix",
+      brand: "Mutina",
+      collection: "Osso & Bottone",
+      url: "https://www.mutina.it/en/collection/osso-bottone-by-ronan-bouroullec/osso-bottone-by-ronan-bouroullec",
+      name: "Osso S",
+      credit: "Ronan Bouroullec, 2024",
+      material: "Unglazed full-body porcelain stoneware, 10 mm",
+      size: { w: 3, l: 27.5 },
+      shape: { type: "concave-strip", waist: 0.88 },
+      layouts: ["straight", "drop"],
+      colors: [
+        { id: "sabbia", name: "Sabbia", color: "#d5c0a8" },
+        { id: "rosso", name: "Rosso", color: "#b27c6f" },
+        { id: "grigio", name: "Grigio", color: "#98938e" },
+        { id: "verde", name: "Verde", color: "#929382" },
+        { id: "blu", name: "Blu", color: "#9ea8ac" }
+      ],
+      defaults: { tiles: ["sabbia"], grout: "#cdbfa6", joint: 3, wall: 80 },
+      note: "Osso S, nominal 3 × 27.5 cm. The long sides curve inward, so the joints between pieces open into narrow lenses."
+    },
+
     /*
      * Homage to the Square: 15 × 15 cm. Every colour has two decors:
      *   Dash: glossy centre square ("main"), matte edge bars ("bar"), glossy corner squares ("accent").
@@ -103,7 +147,7 @@
       material: "Glazed pressed body, matt or glossy, 9 mm",
       size: { w: 3.6, l: 7.4 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "white-matt", name: "White matt", color: "#f5f2ea" },
         { id: "black-matt", name: "Black matt", color: "#282a29" },
@@ -171,7 +215,7 @@
       material: "Glazed pressed body, matt or glossy, 9 mm",
       size: { w: 7.4, l: 15 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "white-matt", name: "White matt", color: "#f5f2ea" },
         { id: "black-matt", name: "Black matt", color: "#282a29" },
@@ -239,7 +283,7 @@
       material: "Glazed homogeneous porcelain stoneware, 9 mm",
       size: { w: 9.4, l: 18.7 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "ash-dark", name: "Ash Dark", color: "#616668", tones: [{ c: "#616668", w: 26 }, { c: "#3e3f41", w: 25 }, { c: "#494c4e", w: 25 }, { c: "#5b5c61", w: 12 }, { c: "#757b7d", w: 9 }] },
         { id: "blush-dark", name: "Blush Dark", color: "#857d74", tones: [{ c: "#857d74", w: 31 }, { c: "#594d48", w: 17 }, { c: "#563627", w: 17 }, { c: "#463c34", w: 15 }, { c: "#5d5b61", w: 15 }] },
@@ -285,7 +329,7 @@
       material: "Extruded unglazed porcelain stoneware, 10 mm",
       size: { w: 15, l: 30 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "bone", name: "Bone", color: "#e9dcc5" },
         { id: "storm", name: "Storm", color: "#afab9f" },
@@ -308,7 +352,7 @@
       material: "Extruded unglazed porcelain stoneware, 10 mm",
       size: { w: 15, l: 60 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "bone", name: "Bone", color: "#e9dcc5" },
         { id: "storm", name: "Storm", color: "#afab9f" },
@@ -331,7 +375,7 @@
       material: "Extruded unglazed porcelain stoneware, 10 mm",
       size: { w: 15, l: 90 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "bone", name: "Bone", color: "#e9dcc5" },
         { id: "storm", name: "Storm", color: "#afab9f" },
@@ -366,6 +410,29 @@
       note: "Kosei, nominal 60 × 60 cm."
     },
 
+    "mutina-kosei-chevron": {
+      kind: "mix",
+      brand: "Mutina",
+      collection: "Kosei",
+      url: "https://www.mutina.it/en/collection/kosei-by-vincent-van-duysen/kosei-by-vincent-van-duysen",
+      name: "Kosei Chevron 9.6 × 56.5",
+      credit: "Vincent Van Duysen",
+      material: "Extruded unglazed porcelain stoneware, 10 mm",
+      size: { w: 9.6, l: 56.5 },
+      shape: { type: "rect" },
+      layouts: ["chevron"],
+      chevronAngle: 45,
+      colors: [
+        { id: "bone", name: "Bone", color: "#e9dcc5" },
+        { id: "storm", name: "Storm", color: "#afab9f" },
+        { id: "terra", name: "Terra", color: "#684d44" },
+        { id: "dark-grey", name: "Dark Grey", color: "#3e3e40" },
+        { id: "grey-green", name: "Grey Green", color: "#555652" }
+      ],
+      defaults: { tiles: ["bone"], grout: "#cdbfa6", joint: 2, wall: 300, layout: "chevron" },
+      note: "Kosei Chevron, nominal 9.6 × 56.5 cm. The 45° cut is estimated: Mutina's photos are all in perspective."
+    },
+
     "mutina-mews-5-5x45": {
       kind: "mix",
       brand: "Mutina",
@@ -377,7 +444,7 @@
       material: "Homogeneous porcelain stoneware, 9 mm",
       size: { w: 5.5, l: 45 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "chalk", name: "Chalk", color: "#e4dfd6", tones: [{ c: "#e4dfd6", w: 44 }, { c: "#e7e2d9", w: 26 }, { c: "#e2ddd3", w: 25 }] },
         { id: "fog", name: "Fog", color: "#d6cdc1", tones: [{ c: "#d6cdc1", w: 38 }, { c: "#d0c6b8", w: 34 }, { c: "#d9d0c5", w: 26 }] },
@@ -420,6 +487,60 @@
       note: "Mews, nominal 11 × 11 cm. Each colour comes in several tones mixed tile by tile, sampled from Mutina's product photos."
     },
 
+    "mutina-mews-chevron-39-4": {
+      kind: "mix",
+      brand: "Mutina",
+      collection: "Mews",
+      url: "https://www.mutina.it/en/collection/mews-by-barber-osgerby",
+      name: "Mews Chevron 5.5 × 39.4",
+      credit: "Barber & Osgerby",
+      material: "Homogeneous porcelain stoneware, 9 mm",
+      size: { w: 5.5, l: 39.4 },
+      shape: { type: "rect" },
+      layouts: ["chevron"],
+      chevronAngle: 45,
+      colors: [
+        { id: "chalk", name: "Chalk", color: "#e4dfd6", tones: [{ c: "#e4dfd6", w: 44 }, { c: "#e7e2d9", w: 26 }, { c: "#e2ddd3", w: 25 }] },
+        { id: "fog", name: "Fog", color: "#d6cdc1", tones: [{ c: "#d6cdc1", w: 38 }, { c: "#d0c6b8", w: 34 }, { c: "#d9d0c5", w: 26 }] },
+        { id: "ink", name: "Ink", color: "#2c323e", tones: [{ c: "#2c323e", w: 51 }, { c: "#282e3a", w: 23 }, { c: "#323641", w: 23 }] },
+        { id: "lead", name: "Lead", color: "#626061", tones: [{ c: "#626061", w: 40 }, { c: "#676466", w: 31 }, { c: "#56575b", w: 27 }] },
+        { id: "pigeon", name: "Pigeon", color: "#898783", tones: [{ c: "#898783", w: 35 }, { c: "#8d8c88", w: 35 }, { c: "#92908c", w: 27 }] },
+        { id: "soot", name: "Soot", color: "#3c3e43", tones: [{ c: "#3c3e43", w: 47 }, { c: "#414247", w: 37 }, { c: "#37393c", w: 14 }] },
+        { id: "pink", name: "Pink", color: "#b69684", tones: [{ c: "#b69684", w: 49 }, { c: "#bb9c8b", w: 38 }, { c: "#c3a594", w: 11 }] },
+        { id: "light-blue", name: "Light Blue", color: "#9da9a4", tones: [{ c: "#9da9a4", w: 46 }, { c: "#97a39f", w: 30 }, { c: "#a4afa9", w: 22 }] },
+        { id: "green", name: "Green", color: "#939984", tones: [{ c: "#939984", w: 56 }, { c: "#9ca28c", w: 22 }, { c: "#858f7f", w: 19 }] }
+      ],
+      defaults: { tiles: ["chalk"], grout: "#bfbcb6", joint: 2, wall: 200, layout: "chevron" },
+      note: "Mews Chevron, nominal 5.5 × 39.4 cm. Each colour comes in several tones mixed tile by tile. The 45° cut is estimated: Mutina's photos are all in perspective."
+    },
+
+    "mutina-mews-chevron-19-6": {
+      kind: "mix",
+      brand: "Mutina",
+      collection: "Mews",
+      url: "https://www.mutina.it/en/collection/mews-by-barber-osgerby",
+      name: "Mews Chevron 5.5 × 19.6",
+      credit: "Barber & Osgerby",
+      material: "Homogeneous porcelain stoneware, 9 mm",
+      size: { w: 5.5, l: 19.6 },
+      shape: { type: "rect" },
+      layouts: ["chevron"],
+      chevronAngle: 45,
+      colors: [
+        { id: "chalk", name: "Chalk", color: "#e4dfd6", tones: [{ c: "#e4dfd6", w: 44 }, { c: "#e7e2d9", w: 26 }, { c: "#e2ddd3", w: 25 }] },
+        { id: "fog", name: "Fog", color: "#d6cdc1", tones: [{ c: "#d6cdc1", w: 38 }, { c: "#d0c6b8", w: 34 }, { c: "#d9d0c5", w: 26 }] },
+        { id: "ink", name: "Ink", color: "#2c323e", tones: [{ c: "#2c323e", w: 51 }, { c: "#282e3a", w: 23 }, { c: "#323641", w: 23 }] },
+        { id: "lead", name: "Lead", color: "#626061", tones: [{ c: "#626061", w: 40 }, { c: "#676466", w: 31 }, { c: "#56575b", w: 27 }] },
+        { id: "pigeon", name: "Pigeon", color: "#898783", tones: [{ c: "#898783", w: 35 }, { c: "#8d8c88", w: 35 }, { c: "#92908c", w: 27 }] },
+        { id: "soot", name: "Soot", color: "#3c3e43", tones: [{ c: "#3c3e43", w: 47 }, { c: "#414247", w: 37 }, { c: "#37393c", w: 14 }] },
+        { id: "pink", name: "Pink", color: "#b69684", tones: [{ c: "#b69684", w: 49 }, { c: "#bb9c8b", w: 38 }, { c: "#c3a594", w: 11 }] },
+        { id: "light-blue", name: "Light Blue", color: "#9da9a4", tones: [{ c: "#9da9a4", w: 46 }, { c: "#97a39f", w: 30 }, { c: "#a4afa9", w: 22 }] },
+        { id: "green", name: "Green", color: "#939984", tones: [{ c: "#939984", w: 56 }, { c: "#9ca28c", w: 22 }, { c: "#858f7f", w: 19 }] }
+      ],
+      defaults: { tiles: ["chalk"], grout: "#bfbcb6", joint: 2, wall: 120, layout: "chevron" },
+      note: "Mews Chevron, nominal 5.5 × 19.6 cm. Each colour comes in several tones mixed tile by tile. The 45° cut is estimated: Mutina's photos are all in perspective."
+    },
+
     "mutina-otto": {
       kind: "mix",
       brand: "Mutina",
@@ -431,7 +552,7 @@
       material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
       size: { w: 15, l: 90 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "latte-l1", name: "Latte L1", color: "#f4f1ec" },
         { id: "perla-p5", name: "Perla P5", color: "#e3dbc8" },
@@ -513,7 +634,7 @@
       material: "Unglazed, unrectified porcelain stoneware, smooth or rough, 12 mm",
       size: { w: 3.9, l: 20.5 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "dover-white-smooth", name: "Dover White smooth", color: "#e6decd" },
         { id: "atlas-brown-smooth", name: "Atlas Brown smooth", color: "#736758" },
