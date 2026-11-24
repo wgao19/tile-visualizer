@@ -14,6 +14,7 @@
  *               "mix"   one or more colours mixed across the surface, any outline from js/shapes.js
  *               "decor" one colour per tile, each made in two decors (Dash / Dot) set out in a pattern
  *   brand, name, credit, material, note   shown with the tile
+ *   url       optional: the product or collection page; linked from the picker and the area page
  *   collection  optional: the brand's name for the product family. A label only: it is
  *             shown, searched and used to sort tiles within a brand, nothing more.
  *   size      { w, l } in centimetres

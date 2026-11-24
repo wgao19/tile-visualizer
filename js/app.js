@@ -55,6 +55,16 @@
       return t.c + " " + from.toFixed(1) + "% " + (at / total * 100).toFixed(1) + "%";
     }).join(",") + ")";
   }
+  /* "mutina.it ↗" link to the tile's own page, or null. */
+  function sourceLink(tile, cls, short) {
+    if (!tile.url) return null;
+    var host = tile.url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
+    var a = make("a", cls, (tile.collection && !short ? tile.collection + " on " : "") + host + " ↗");
+    a.href = tile.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    return a;
+  }
   function sizeText(tile) { return tile.size.w + " × " + tile.size.l + " cm"; }
 
   /* ---------- areas ---------- */
@@ -325,6 +335,8 @@
     el("title").textContent = area.name;
     el("subtitle").textContent = tileName(tile) + (tile.collection && tile.name.indexOf(tile.collection) !== 0 ? " (" + tile.collection + ")" : "") + " · " + sizeText(tile) +
       (tile.credit ? " · " + tile.credit : "") + (tile.material ? ". " + tile.material + "." : "");
+    var link = sourceLink(tile, "source-link");
+    if (link) { el("subtitle").appendChild(document.createTextNode(" ")); el("subtitle").appendChild(link); }
     el("productNote").textContent = tile.note || "";
     document.title = area.name + " · Tile Visualizer";
     wrap.classList.toggle("fit", !!kindOf(tile).aspect);
@@ -524,8 +536,9 @@
   };
 
   function buildControls() {
-    var box = el("tileControls");
+    var box = el("tileControls"), areaBox = el("areaControls");
     box.innerHTML = "";
+    areaBox.innerHTML = "";
     syncers = [syncGrouts];
     swatchDraws = [];
     kindOf(tile).controls(tile).forEach(function (c, n) {
@@ -539,12 +552,13 @@
       var sync = CONTROL[c.type](c, field, id);
       var group = field.querySelector("[role=group]");
       if (group) group.setAttribute("aria-labelledby", id + "l");
-      box.appendChild(field);
+      (c.place === "area" ? areaBox : box).appendChild(field);
       syncers.push(function () {
         field.hidden = c.show ? !c.show(state) : false;
         sync();
       });
     });
+    areaBox.hidden = !areaBox.children.length;
     syncers.forEach(function (f) { f(); });
     drawSwatches();
   }
@@ -600,7 +614,14 @@
       txt.appendChild(make("span", null, sizeText(t) + " · " + t.colors.length + " colours"));
       b.appendChild(txt);
       b.addEventListener("click", function () { pickedTile = id; syncPicker(); });
-      groups[brand].appendChild(b);
+      var card = make("div", "tile-card");
+      card.appendChild(b);
+      var link = sourceLink(t, "tile-link", true);
+      if (link) {
+        link.setAttribute("aria-label", tileName(t) + " on " + link.textContent.replace(" ↗", "") + " (opens in a new tab)");
+        card.appendChild(link);
+      }
+      groups[brand].appendChild(card);
     });
     filterPicker();
   }
@@ -610,7 +631,7 @@
       var any = false;
       Array.prototype.forEach.call(sec.querySelectorAll(".tile-opt"), function (b) {
         var ok = words.every(function (w) { return b.dataset.search.indexOf(w) >= 0; });
-        b.hidden = !ok;
+        b.parentNode.hidden = !ok;
         if (ok) { any = true; shown++; }
       });
       sec.hidden = !any;
@@ -627,7 +648,7 @@
     el("dlgSave").disabled = !pickedTile;
   }
   function drawPicker() {
-    Array.prototype.forEach.call(picker.querySelectorAll(".tile-opt:not([hidden]) canvas"), function (c) {
+    Array.prototype.forEach.call(picker.querySelectorAll(".tile-card:not([hidden]) canvas"), function (c) {
       var id = c.parentNode.dataset.id, t = TV.TILES[id];
       // Show the area's own options on its current tile, the tile's defaults elsewhere.
       var st = editing && editing.tile === id ? editing.st : optionsFor(t);

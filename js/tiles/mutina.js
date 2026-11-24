@@ -1,5 +1,5 @@
 /*
- * Mutina tiles (mutina.it). One entry per tile size; tiles of the same size that are
+ * Mutina tiles (mutina.it). `url` is the collection's page on mutina.it. One entry per tile size; tiles of the same size that are
  * meant to be mixed (colours, finishes, tones) share an entry.
  *
  * Colours are sampled from the product photos on mutina.it (the median of the tile face,
@@ -15,6 +15,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Osso & Bottone",
+
+      url: "https://www.mutina.it/en/collection/osso-bottone-by-ronan-bouroullec/osso-bottone-by-ronan-bouroullec",
       name: "Bottone L",
       credit: "Ronan Bouroullec, 2024",
       material: "Unglazed porcelain stoneware, 10 mm",
@@ -36,6 +38,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Osso & Bottone",
+
+      url: "https://www.mutina.it/en/collection/osso-bottone-by-ronan-bouroullec/osso-bottone-by-ronan-bouroullec",
       name: "Bottone S",
       credit: "Ronan Bouroullec, 2024",
       material: "Unglazed full-body porcelain stoneware, 10 mm",
@@ -64,6 +68,8 @@
       kind: "decor",
       brand: "Mutina",
       collection: "Homage to the Square",
+
+      url: "https://www.mutina.it/en/collection/homage-to-the-square-by-albers-foundation",
       name: "Homage to the Square",
       credit: "Josef & Anni Albers Foundation",
       material: "Glazed, unrectified porcelain stoneware, 9 mm",
@@ -90,6 +96,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "DIN",
+
+      url: "https://www.mutina.it/en/collection/din-by-konstantin-grcic",
       name: "DIN 3.6 × 7.4",
       credit: "Konstantin Grcic",
       material: "Glazed pressed body, matt or glossy, 9 mm",
@@ -122,6 +130,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "DIN",
+
+      url: "https://www.mutina.it/en/collection/din-by-konstantin-grcic",
       name: "DIN 7.4 × 7.4",
       credit: "Konstantin Grcic",
       material: "Glazed pressed body, matt or glossy, 9 mm",
@@ -154,6 +164,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "DIN",
+
+      url: "https://www.mutina.it/en/collection/din-by-konstantin-grcic",
       name: "DIN 7.4 × 15",
       credit: "Konstantin Grcic",
       material: "Glazed pressed body, matt or glossy, 9 mm",
@@ -186,6 +198,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "DIN",
+
+      url: "https://www.mutina.it/en/collection/din-by-konstantin-grcic",
       name: "DIN 15 × 15",
       credit: "Konstantin Grcic",
       material: "Glazed pressed body, matt or glossy, 9 mm",
@@ -218,6 +232,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Diarama",
+
+      url: "https://www.mutina.it/en/collection/diarama-by-hella-jongerius",
       name: "Diarama",
       credit: "Hella Jongerius",
       material: "Glazed homogeneous porcelain stoneware, 9 mm",
@@ -239,6 +255,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Kosei",
+
+      url: "https://www.mutina.it/en/collection/kosei-by-vincent-van-duysen/kosei-by-vincent-van-duysen",
       name: "Kosei 15 × 15",
       credit: "Vincent Van Duysen",
       material: "Extruded unglazed porcelain stoneware, 10 mm",
@@ -260,6 +278,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Kosei",
+
+      url: "https://www.mutina.it/en/collection/kosei-by-vincent-van-duysen/kosei-by-vincent-van-duysen",
       name: "Kosei 15 × 30",
       credit: "Vincent Van Duysen",
       material: "Extruded unglazed porcelain stoneware, 10 mm",
@@ -281,6 +301,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Kosei",
+
+      url: "https://www.mutina.it/en/collection/kosei-by-vincent-van-duysen/kosei-by-vincent-van-duysen",
       name: "Kosei 15 × 60",
       credit: "Vincent Van Duysen",
       material: "Extruded unglazed porcelain stoneware, 10 mm",
@@ -302,6 +324,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Kosei",
+
+      url: "https://www.mutina.it/en/collection/kosei-by-vincent-van-duysen/kosei-by-vincent-van-duysen",
       name: "Kosei 15 × 90",
       credit: "Vincent Van Duysen",
       material: "Extruded unglazed porcelain stoneware, 10 mm",
@@ -323,6 +347,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Kosei",
+
+      url: "https://www.mutina.it/en/collection/kosei-by-vincent-van-duysen/kosei-by-vincent-van-duysen",
       name: "Kosei 60 × 60",
       credit: "Vincent Van Duysen",
       material: "Extruded unglazed porcelain stoneware, 10 mm",
@@ -344,6 +370,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Mews",
+
+      url: "https://www.mutina.it/en/collection/mews-by-barber-osgerby",
       name: "Mews strip 5.5 × 45",
       credit: "Barber & Osgerby",
       material: "Homogeneous porcelain stoneware, 9 mm",
@@ -369,6 +397,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Mews",
+
+      url: "https://www.mutina.it/en/collection/mews-by-barber-osgerby",
       name: "Mews 11 × 11",
       credit: "Barber & Osgerby",
       material: "Homogeneous porcelain stoneware, 9 mm",
@@ -394,6 +424,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Otto",
+
+      url: "https://www.mutina.it/en/collection/otto-by-mutina",
       name: "Otto 15 × 90",
       credit: "Mutina",
       material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
@@ -418,6 +450,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Teknotessere",
+
+      url: "https://www.mutina.it/en/collection/teknotessere-by-mutina-team",
       name: "Teknotessere 1 × 1",
       credit: "Mutina Team",
       material: "Homogeneous porcelain tesserae on a 30 × 30 cm net, 7 mm",
@@ -438,6 +472,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Time",
+
+      url: "https://www.mutina.it/en/collection/time-by-barber-osgerby/time-by-barber-osgerby",
       name: "Time 3.9 × 3.9",
       credit: "Barber & Osgerby",
       material: "Unglazed, unrectified porcelain stoneware, smooth or rough, 12 mm",
@@ -470,6 +506,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Time",
+
+      url: "https://www.mutina.it/en/collection/time-by-barber-osgerby/time-by-barber-osgerby",
       name: "Time 3.9 × 20.5",
       credit: "Barber & Osgerby",
       material: "Unglazed, unrectified porcelain stoneware, smooth or rough, 12 mm",
@@ -502,6 +540,8 @@
       kind: "mix",
       brand: "Mutina",
       collection: "Time",
+
+      url: "https://www.mutina.it/en/collection/time-by-barber-osgerby/time-by-barber-osgerby",
       name: "Time 20.5 × 20.5",
       credit: "Barber & Osgerby",
       material: "Unglazed, unrectified porcelain stoneware, smooth or rough, 12 mm",
@@ -534,6 +574,8 @@
       kind: "decor",
       brand: "Mutina",
       collection: "Betty",
+
+      url: "https://www.mutina.it/en/collection/betty-by-raw-edges",
       name: "Betty",
       credit: "Raw Edges",
       material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
@@ -558,6 +600,8 @@
       kind: "decor",
       brand: "Mutina",
       collection: "Fringe",
+
+      url: "https://www.mutina.it/en/collection/fringe-by-michael-anastassiades/fringe-by-michael-anastassiades",
       name: "Fringe",
       credit: "Michael Anastassiades",
       material: "Unglazed, rectified porcelain stoneware, 12 mm",
@@ -581,6 +625,8 @@
       kind: "decor",
       brand: "Mutina",
       collection: "Tape",
+
+      url: "https://www.mutina.it/en/collection/tape-by-raw-edges",
       name: "Tape",
       credit: "Raw Edges",
       material: "Glazed porcelain stoneware, 10 mm",
@@ -612,6 +658,8 @@
       kind: "decor",
       brand: "Mutina",
       collection: "Dintorni",
+
+      url: "https://www.mutina.it/en/collection/dintorni-by-inga-sempe",
       name: "Dintorni",
       credit: "Inga Sempé",
       material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
