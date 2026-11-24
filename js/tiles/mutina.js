@@ -68,7 +68,7 @@
       credit: "Josef & Anni Albers Foundation",
       material: "Glazed, unrectified porcelain stoneware, 9 mm",
       size: { w: 15, l: 15 },
-      border: 0.123,
+      turn: false,
       colors: [
         { id: "sea", name: "Sea", main: "#4d768d", bar: "#275569", accent: "#023546", photographed: "dot" },
         { id: "evergreen", name: "Evergreen", main: "#3a5351", bar: "#397370", accent: "#12100f", photographed: "dash" },
@@ -78,7 +78,11 @@
         { id: "sage", name: "Sage", main: "#caceb4", bar: "#e3dec0", accent: "#c6b77d", photographed: "dash" },
         { id: "peach", name: "Peach", main: "#ef8b72", bar: "#eca492", accent: "#e9bdb3", photographed: "dot" }
       ],
-      defaults: { color: "sea", pattern: "dash", grout: "#f2efe9", joint: 2, w: 240, h: 60 },
+      decors: [
+        { id: "dash", name: "Dash", paint: "homage", variant: "dash", border: 0.123 },
+        { id: "dot", name: "Dot", paint: "homage", variant: "dot", border: 0.123 }
+      ],
+      defaults: { variants: ["sea-dash"], pattern: "alt", grout: "#f2efe9", joint: 2, w: 240, h: 60 },
       note: "Homage to the Square, 15 × 15 cm, 9 mm. Mutina's site photographs one decor per colour; the other decor's tones are estimated."
     },
 
@@ -524,6 +528,111 @@
       ],
       defaults: { tiles: ["dover-white-smooth"], grout: "#cdbfa6", joint: 3, wall: 150, angle: 0 },
       note: "Time, nominal 20.5 × 20.5 cm. The rough finish is speckled; it's drawn as its average colour."
+    },
+
+    "mutina-betty": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Betty",
+      name: "Betty",
+      credit: "Raw Edges",
+      material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
+      size: { w: 20.5, l: 20.5 },
+      colors: [
+        { id: "blush", name: "Blush", base: "#e5c5af", motif: "#cb9d81", frame: "#c58a6c" },
+        { id: "concrete", name: "Concrete", base: "#cdccc4", motif: "#e5e3db", frame: "#b3afa6" },
+        { id: "night-blue", name: "Night Blue", base: "#394c5b", motif: "#52697b", frame: "#2b3038" }
+      ],
+      decors: [
+        { id: "plain", name: "Plain", paint: "plain" },
+        { id: "t", name: "T Shape", paint: "betty", shape: "t" },
+        { id: "plus", name: "Plus", paint: "betty", shape: "plus" },
+        { id: "frame", name: "Frame", paint: "betty", shape: "frame" },
+        { id: "set", name: "Set", paint: "betty", shape: "set" }
+      ],
+      defaults: { variants: ["blush-t"], turn: "random", grout: "#e6dcc8", joint: 2, w: 120, h: 120 },
+      note: "Betty, 20.5 × 20.5 cm. Turn the T shapes randomly for labyrinths, or alternate them for weaves."
+    },
+
+    "mutina-fringe": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Fringe",
+      name: "Fringe",
+      credit: "Michael Anastassiades",
+      material: "Unglazed, rectified porcelain stoneware, 12 mm",
+      size: { w: 12.3, l: 12.3 },
+      colors: [
+        { id: "anthracite", name: "Anthracite", base: "#564b4b" },
+        { id: "grey", name: "Grey", base: "#aca6a2" },
+        { id: "red", name: "Red", base: "#ab5f35" },
+        { id: "rose", name: "Rose", base: "#e1bc9d" },
+        { id: "white", name: "White", base: "#e3e0dc" }
+      ],
+      decors: [
+        { id: "bold", name: "Bold", paint: "fringe", segments: 8, groove: 0.22 },
+        { id: "thin", name: "Thin", paint: "fringe", segments: 20, groove: 0.16 }
+      ],
+      defaults: { variants: ["grey-bold"], turn: "alt", grout: "#e6dcc8", joint: 2, w: 120, h: 90 },
+      note: "Fringe, 12.3 × 12.3 cm. Bold has 15 mm segments, Thin 6 mm. The grooves take the grout colour; alternate the turn for a basket weave."
+    },
+
+    "mutina-tape": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Tape",
+      name: "Tape",
+      credit: "Raw Edges",
+      material: "Glazed porcelain stoneware, 10 mm",
+      size: { w: 20.5, l: 20.5 },
+      colors: [
+        { id: "black", name: "Black", base: "#3e4347", cobble: "#c8c9bf", grain: "#616c69", mesh: "#999e9f", zig: "#222220" },
+        { id: "blue", name: "Blue", base: "#deded6", cobble: "#657a8c", grain: "#9eacb4", mesh: "#7e8e8e", zig: "#1a3845" },
+        { id: "brown", name: "Brown", base: "#deded6", cobble: "#b0785d", grain: "#ab9d83", mesh: "#aea798", zig: "#73524d" },
+        { id: "green", name: "Green", base: "#dfdfd7", cobble: "#798c86", grain: "#a4b1a9", mesh: "#8d8e89", zig: "#404e50" },
+        { id: "white", name: "White", base: "#deded6", cobble: "#d2cec2", grain: "#b9b6af", mesh: "#bfbfb8", zig: "#62615c" }
+      ],
+      decors: [
+        { id: "base-white", name: "Base White", paint: "plain", color: "#deded6", group: "Base" },
+        { id: "base-black", name: "Base Black", paint: "plain", color: "#3e4347", group: "Base" },
+        { id: "cobble", name: "Cobble", paint: "tape", motif: "cobble" },
+        { id: "cobble-half", name: "Cobble Half", paint: "tape", motif: "cobble", half: true },
+        { id: "grainy", name: "Grainy", paint: "tape", motif: "grainy" },
+        { id: "grainy-half", name: "Grainy Half", paint: "tape", motif: "grainy", half: true },
+        { id: "mesh", name: "Mesh", paint: "tape", motif: "mesh" },
+        { id: "mesh-half", name: "Mesh Half", paint: "tape", motif: "mesh", half: true },
+        { id: "zigzag", name: "Zigzag", paint: "tape", motif: "zigzag" },
+        { id: "zigzag-half", name: "Zigzag Half", paint: "tape", motif: "zigzag", half: true }
+      ],
+      defaults: { variants: ["base-white", "blue-cobble-half", "blue-cobble"], pattern: "split-h", grout: "#e6dcc8", joint: 2, w: 120, h: 120 },
+      note: "Tape, 20.5 × 20.5 cm. The Base tiles are plain; the Half tiles carry the pattern on their lower half, so they make transitions between patterned and plain areas."
+    },
+
+    "mutina-dintorni": {
+      kind: "decor",
+      brand: "Mutina",
+      collection: "Dintorni",
+      name: "Dintorni",
+      credit: "Inga Sempé",
+      material: "Glazed, not rectified porcelain stoneware, 9.5 mm",
+      size: { w: 20.5, l: 20.5 },
+      colors: [
+        { id: "neve", name: "Neve", base: "#f0f1ec", tint: "#c9c4bf", line: "#a8a7a2", accent: "#cf9a55", dot: "#2b2b2b" },
+        { id: "sole", name: "Sole", base: "#c4cdd6", tint: "#f0efe9", line: "#4f71a6", accent: "#b07c5c", dot: "#2b2b2b" },
+        { id: "ombra", name: "Ombra", base: "#5d5a50", tint: "#dbd5c6", line: "#e0e1d6", accent: "#b07c5c", dot: "#f0f0ea" }
+      ],
+      decors: [
+        { id: "scala", name: "Scala", paint: "dintorni", motif: "scala" },
+        { id: "bandiere", name: "Bandiere", paint: "dintorni", motif: "bandiere" },
+        { id: "dama", name: "Dama", paint: "dintorni", motif: "dama" },
+        { id: "azzurro", name: "Azzurro", paint: "plain", color: "#abb7c0" },
+        { id: "terracotta", name: "Terracotta", paint: "plain", color: "#b47f5c" },
+        { id: "verde-chiaro", name: "Verde Chiaro", paint: "plain", color: "#cbcdba" },
+        { id: "verde-scuro", name: "Verde Scuro", paint: "plain", color: "#575d53" },
+        { id: "blu", name: "Blu", paint: "plain", color: "#2d4964" }
+      ],
+      defaults: { variants: ["sole-scala"], grout: "#f2efe9", joint: 2, w: 120, h: 90 },
+      note: "Dintorni, 20.5 × 20.5 cm. Each pattern comes in Neve, Sole and Ombra, alongside five solid colours. Isola, the ten illustrated tiles, isn't included."
     }
   };
   for (var id in tiles) TV.TILES[id] = tiles[id];
