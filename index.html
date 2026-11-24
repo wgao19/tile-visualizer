@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tile Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <h1 id="title">Tile visualizer</h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <div class="picker" id="pickerRow">
+      <span id="pl">Selection</span>
+      <div class="seg" role="group" aria-labelledby="pl" id="selectionSeg"></div>
+    </div>
+  </header>
+
+  <section class="stage" aria-label="Tile preview">
+    <canvas id="cv" role="img" aria-label="Preview of the selected tiles with the chosen grout colour"></canvas>
+    <div class="readout">
+      <span>Tile <b id="r-tile"></b></span>
+      <span>Grout <b><i class="chip" id="r-chip"></i><span id="r-grout"></span></b></span>
+      <span>Joint <b id="r-joint"></b></span>
+      <span>Wall width <b id="r-wall"></b></span>
+      <button type="button" class="seg-btn share" id="share" aria-live="polite">Share</button>
+    </div>
+  </section>
+
+  <div class="controls">
+    <section class="panel" aria-labelledby="gh">
+      <h2 id="gh">Grout colour</h2>
+      <div class="swatches" id="swatches"></div>
+      <div class="custom">
+        <input type="color" id="custom" value="#cdbfa6" aria-label="Custom grout colour">
+        <label for="custom">Custom colour</label>
+        <span class="hex" id="customHex"></span>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="lh">
+      <h2 id="lh">Tile and layout</h2>
+      <div class="field">
+        <label id="tl">Tile colours (pick one or mix several)</label>
+        <div class="swatches" role="group" aria-labelledby="tl" id="tileSw"></div>
+        <div class="row"><button type="button" class="seg-btn" id="allTiles">Select all</button></div>
+      </div>
+      <div class="field" id="mixField">
+        <label id="ml">Mix pattern</label>
+        <div class="seg" role="group" aria-labelledby="ml" id="mixSeg"></div>
+      </div>
+      <div class="field">
+        <label id="ll">Layout</label>
+        <div class="seg" role="group" aria-labelledby="ll" id="layoutSeg"></div>
+      </div>
+      <div class="field">
+        <label id="al">Direction</label>
+        <div class="seg" role="group" aria-labelledby="al" id="angleSeg"></div>
+      </div>
+      <div class="field">
+        <div class="top"><label for="joint">Grout joint</label><span id="jointOut"></span></div>
+        <input type="range" id="joint" min="1" max="8" step="0.5" value="3">
+      </div>
+      <div class="field">
+        <div class="top"><label for="wall">Wall width shown</label><span id="wallOut"></span></div>
+        <input type="range" id="wall" min="40" max="200" step="5" value="90">
+      </div>
+      <p class="note"><span id="productNote"></span> Tile colours are matched by eye from the sample sheet, so screen colours will differ from the real tile. Check physical samples before ordering.</p>
+    </section>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/shapes.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
