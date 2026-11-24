@@ -11,6 +11,18 @@
       ctx.rect(x, y, w, l);
     },
 
+    /* Osso: long sides bowed inward, narrowest (waist × width) halfway along. */
+    "concave-strip": function (ctx, x, y, w, l, shape) {
+      var d = w * (1 - (shape.waist || 0.88)) / 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+      ctx.quadraticCurveTo(x + w - 2 * d, y + l / 2, x + w, y + l);
+      ctx.lineTo(x, y + l);
+      ctx.quadraticCurveTo(x + 2 * d, y + l / 2, x, y);
+      ctx.closePath();
+    },
+
     "notched-strip": function (ctx, x, y, w, l, shape) {
       var r = shape.notchRadius, n = shape.notches, i, cy;
       ctx.beginPath();

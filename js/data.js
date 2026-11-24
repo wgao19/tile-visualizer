@@ -22,7 +22,8 @@
  *   defaults  optional: starting options when an area picks this tile (grout, joint and kind options)
  *   grouts    optional: grout colours suggested for this tile, [{ name, c }]. They are shown
  *             above the shared palette; the area can still pick any colour.
- *   mix only: shape { type, ... } and layouts ["straight", "drop"]. A colour may list
+ *   mix only: shape { type, ... } and layouts (any of "straight", "drop", "herringbone",
+ *             "chevron"; chevron tiles also give `chevronAngle`, degrees, default 45). A colour may list
  *             `tones: [{ c, w }]` (colour, weight) when the product varies tile by tile;
  *             each tile then gets one tone, picked in proportion to the weights.
  *   decor only: border (edge band width as a fraction of the tile)
@@ -57,7 +58,7 @@
       material: "Glazed ceramic",
       size: { w: 7.5, l: 15 },
       shape: { type: "rect" },
-      layouts: ["straight", "drop"],
+      layouts: ["straight", "drop", "herringbone"],
       colors: [
         { id: "white", name: "White", color: "#eeece6" },
         { id: "cream", name: "Cream", color: "#e4d6b8" },
