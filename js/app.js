@@ -1,293 +1,421 @@
 (function () {
   var TV = window.TileViz;
 
-  var ALL_LAYOUTS = {
-    straight: { id: "straight", name: "Straight" },
-    drop: { id: "drop", name: "Half drop" }
-  };
-  var ANGLES = [
-    { id: 0, name: "Vertical" },
-    { id: 90, name: "Horizontal" },
-    { id: 45, name: "Diagonal" }
+  /* ---------- option lists ---------- */
+  var LAYOUTS = { straight: { id: "straight", name: "Straight" }, drop: { id: "drop", name: "Half drop" } };
+  var ANGLES = [{ id: 0, name: "Vertical" }, { id: 90, name: "Horizontal" }, { id: 45, name: "Diagonal" }];
+  var MIXES = [{ id: "random", name: "Random" }, { id: "columns", name: "By strip" }, { id: "rows", name: "By row" }];
+  var PATTERNS = [
+    { id: "dash", name: "All dash" },
+    { id: "dot", name: "All dot" },
+    { id: "split-h", name: "Top / bottom" },
+    { id: "split-v", name: "Left / right" },
+    { id: "alt", name: "Alternate" }
   ];
-  var MIXES = [
-    { id: "random", name: "Random" },
-    { id: "columns", name: "By strip" },
-    { id: "rows", name: "By row" }
-  ];
-  var BASE_DEFAULTS = {
-    mix: "random", grout: "#cdbfa6", groutName: "Sabbia",
-    layout: "straight", angle: 0, joint: 3, wall: 90
-  };
 
-  var selection, product, state;
-
-  var cv = document.getElementById("cv");
-  var ctx = cv.getContext("2d");
+  /* ---------- small helpers ---------- */
   function el(id) { return document.getElementById(id); }
-
-  /* ---------- helpers ---------- */
-  function hexToRgb(h) {
-    h = h.replace("#", "");
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  }
-  function shade(h, f) {
-    var c = hexToRgb(h).map(function (v) { return Math.max(0, Math.min(255, Math.round(v * f))); });
-    return "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")";
-  }
-  function rnd(i, j) {
-    var s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
-    return s - Math.floor(s);
-  }
-  function assign(target) {
+  function assign(t) {
     for (var k = 1; k < arguments.length; k++) {
-      var src = arguments[k];
-      if (src) for (var p in src) if (Object.prototype.hasOwnProperty.call(src, p)) target[p] = src[p];
+      var s = arguments[k];
+      if (s) for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = Array.isArray(s[p]) ? s[p].slice() : s[p];
     }
-    return target;
+    return t;
   }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+  function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
+  function inRange(v, lo, hi) { return isFinite(v) && v >= lo && v <= hi; }
+  function groutName(hex) {
+    var g = TV.GROUTS.filter(function (x) { return x.c.toLowerCase() === hex.toLowerCase(); })[0];
+    return g ? g.name : "Custom";
+  }
+  function productOf(place) { return TV.PRODUCTS[place.product]; }
+  function layoutsFor(product) {
+    return (product.layouts || ["straight"]).map(function (k) { return LAYOUTS[k]; }).filter(Boolean);
+  }
+  function parseQuery(q) {
+    var out = {};
+    (q || "").split("&").forEach(function (kv) {
+      var k = kv.indexOf("=");
+      if (k > 0) {
+        try { out[decodeURIComponent(kv.slice(0, k))] = decodeURIComponent(kv.slice(k + 1)); } catch (e) { /* skip bad pair */ }
+      }
     });
+    return out;
+  }
+  function toQuery(pairs) {
+    return pairs.map(function (p) { return p[0] + "=" + encodeURIComponent(p[1]); }).join("&");
+  }
+  function parseGrout(p, st) {
+    if (/^[0-9a-f]{6}$/i.test(p.g || "")) st.grout = "#" + p.g.toLowerCase();
+  }
+  function parseJoint(p, st) {
+    var j = parseFloat(p.j);
+    if (inRange(j, 1, 8)) st.joint = Math.round(j * 2) / 2;
   }
 
-  var noise = (function () {
-    var n = document.createElement("canvas");
-    n.width = n.height = 192;
-    var g = n.getContext("2d");
-    for (var k = 0; k < 4200; k++) {
-      var dark = Math.random() < 0.55;
-      g.fillStyle = dark ? "rgba(0,0,0," + (0.05 + Math.random() * 0.09) + ")" : "rgba(255,255,255," + (0.05 + Math.random() * 0.1) + ")";
-      var sz = Math.random() < 0.85 ? 1 : 2;
-      g.fillRect(Math.random() * 192, Math.random() * 192, sz, sz);
-    }
-    return n;
-  })();
+  /* ---------- per-kind behaviour ----------
+   * base:      fallback defaults for anything a place doesn't set
+   * normalize: make a state valid for its product
+   * serialize: [key, value] pairs written to the URL
+   * parse:     apply URL params on top of a state (invalid values are ignored)
+   * facts:     [label, value, chip colour?] rows for the readout and overview cards
+   */
+  var KINDS = {
+    strip: {
+      base: { tiles: [], mix: "random", grout: "#cdbfa6", layout: "straight", angle: 0, joint: 3, wall: 90 },
+      normalize: function (product, st) {
+        st.tiles = st.tiles.filter(function (id, i, a) { return a.indexOf(id) === i && byId(product.colors, id); });
+        if (!st.tiles.length) st.tiles = [product.colors[0].id];
+        var ls = layoutsFor(product);
+        if (!byId(ls, st.layout)) st.layout = ls[0].id;
+      },
+      serialize: function (st) {
+        return [["t", st.tiles.join(",")], ["m", st.mix], ["g", st.grout.slice(1)], ["l", st.layout],
+          ["a", st.angle], ["j", st.joint], ["w", st.wall]];
+      },
+      parse: function (p, product, st) {
+        if (p.t) st.tiles = p.t.split(",");
+        if (byId(MIXES, p.m)) st.mix = p.m;
+        parseGrout(p, st);
+        if (p.l) st.layout = p.l;
+        var a = parseFloat(p.a);
+        if (byId(ANGLES, a)) st.angle = a;
+        parseJoint(p, st);
+        var w = parseFloat(p.w);
+        if (inRange(w, 40, 200)) st.wall = Math.round(w / 5) * 5;
+      },
+      facts: function (product, st) {
+        var f = [
+          ["Tile", product.colors.filter(function (t) { return st.tiles.indexOf(t.id) >= 0; }).map(function (t) { return t.name; }).join(", ")]
+        ];
+        if (st.tiles.length > 1) f.push(["Mix", byId(MIXES, st.mix).name]);
+        f.push(["Layout", LAYOUTS[st.layout].name + ", " + byId(ANGLES, st.angle).name.toLowerCase()]);
+        f.push(["Grout", groutName(st.grout) + " " + st.grout.toUpperCase(), st.grout]);
+        f.push(["Joint", st.joint + " mm"]);
+        return f;
+      }
+    },
 
-  /* ---------- drawing ---------- */
-  function draw() {
-    var dpr = window.devicePixelRatio || 1;
-    var cssW = cv.clientWidth, cssH = cv.clientHeight;
-    if (!cssW || !product) return;
-    cv.width = Math.round(cssW * dpr);
-    cv.height = Math.round(cssH * dpr);
-
-    var TW = product.size.w, TL = product.size.l;
-    var shapeFn = TV.SHAPES[product.shape.type] || TV.SHAPES.rect;
-    var s = cssW / state.wall;            // css px per cm
-    var g = state.joint / 10;             // grout joint in cm
-    var sel = product.colors.filter(function (t) { return state.tiles.indexOf(t.id) >= 0; });
-    var n = sel.length;
-    function pick(i, j) {
-      if (n === 1) return sel[0];
-      if (state.mix === "columns") return sel[((i % n) + n) % n];
-      if (state.mix === "rows") return sel[((j % n) + n) % n];
-      return sel[Math.floor(rnd(i + 7.3, j + 3.9) * n) % n];
-    }
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = state.grout;
-    ctx.fillRect(0, 0, cssW, cssH);
-    ctx.fillStyle = ctx.createPattern(noise, "repeat");
-    ctx.fillRect(0, 0, cssW, cssH);
-
-    var wallH = cssH / s;
-    var reach = Math.hypot(state.wall, wallH) / 2 + Math.max(TW, TL);
-    var pitchX = TW + g, pitchY = TL + g;
-    var nx = Math.ceil(reach / pitchX), ny = Math.ceil(reach / pitchY);
-
-    ctx.save();
-    ctx.translate(cssW / 2, cssH / 2);
-    ctx.rotate(state.angle * Math.PI / 180);
-    ctx.scale(s, s);
-    var pat = ctx.createPattern(noise, "repeat");
-    if (pat.setTransform) pat.setTransform(new DOMMatrix().scale(1 / s));
-    ctx.lineJoin = "round";
-
-    for (var i = -nx; i <= nx; i++) {
-      for (var j = -ny; j <= ny; j++) {
-        var x = i * pitchX - TW / 2;
-        var y = j * pitchY - TL / 2 + (state.layout === "drop" && (i & 1) ? pitchY / 2 : 0);
-        var f = 0.965 + rnd(i, j) * 0.07;
-        shapeFn(ctx, x, y, TW, TL, product.shape);
-        ctx.fillStyle = shade(pick(i, j).color, f);
-        ctx.fill();
-        ctx.fillStyle = pat;
-        ctx.fill();
-        ctx.lineWidth = 1.3 / s;
-        ctx.strokeStyle = "rgba(0,0,0,0.24)";
-        ctx.stroke();
+    decor: {
+      base: { color: null, pattern: "dash", swap: false, grout: "#f2efe9", joint: 2, w: 240, h: 60 },
+      normalize: function (product, st) {
+        if (!byId(product.colors, st.color)) st.color = product.colors[0].id;
+        if (!byId(PATTERNS, st.pattern)) st.pattern = "dash";
+        st.swap = !!st.swap;
+      },
+      serialize: function (st) {
+        return [["c", st.color], ["p", st.pattern], ["s", st.swap ? 1 : 0], ["g", st.grout.slice(1)],
+          ["j", st.joint], ["w", st.w], ["h", st.h]];
+      },
+      parse: function (p, product, st) {
+        if (p.c) st.color = p.c;
+        if (p.p) st.pattern = p.p;
+        if (p.s === "1" || p.s === "0") st.swap = p.s === "1";
+        parseGrout(p, st);
+        parseJoint(p, st);
+        var w = parseFloat(p.w), h = parseFloat(p.h);
+        if (inRange(w, 15, 600)) st.w = Math.round(w);
+        if (inRange(h, 15, 300)) st.h = Math.round(h);
+      },
+      facts: function (product, st) {
+        var L = TV.decorLayout(product, st);
+        var pat = byId(PATTERNS, st.pattern).name;
+        if (st.pattern === "split-h") pat = "Top " + (st.swap ? "dot" : "dash") + ", bottom " + (st.swap ? "dash" : "dot");
+        if (st.pattern === "split-v") pat = "Left " + (st.swap ? "dot" : "dash") + ", right " + (st.swap ? "dash" : "dot");
+        if (st.pattern === "alt") pat = "Alternate, starting " + (st.swap ? "dot" : "dash");
+        var mix = [];
+        if (L.counts.dash) mix.push(L.counts.dash + " dash");
+        if (L.counts.dot) mix.push(L.counts.dot + " dot");
+        return [
+          ["Colour", byId(product.colors, st.color).name],
+          ["Pattern", pat],
+          ["Grout", groutName(st.grout) + " " + st.grout.toUpperCase(), st.grout],
+          ["Joint", st.joint + " mm"],
+          ["Surface", st.w + " × " + st.h + " cm"],
+          ["Tiles", L.total + " (" + mix.join(", ") + (L.cut ? "; " + L.cut + " cut" : "") + ")"]
+        ];
       }
     }
-    ctx.restore();
+  };
+
+  /* ---------- state per place ---------- */
+  var STORE = "tileviz:";
+  var states = {};
+
+  function kindOf(place) { return KINDS[productOf(place).kind]; }
+  function defaultsFor(place) {
+    var k = kindOf(place), st = assign({}, k.base, place.defaults);
+    k.normalize(productOf(place), st);
+    return st;
+  }
+  function stateFromQuery(place, q) {
+    var k = kindOf(place), st = defaultsFor(place);
+    k.parse(parseQuery(q), productOf(place), st);
+    k.normalize(productOf(place), st);
+    return st;
+  }
+  function serialize(place, st) { return toQuery(kindOf(place).serialize(st)); }
+  function getState(place) {
+    if (!states[place.id]) {
+      var saved = null;
+      try { saved = localStorage.getItem(STORE + place.id); } catch (e) { /* storage unavailable */ }
+      states[place.id] = saved ? stateFromQuery(place, saved) : defaultsFor(place);
+    }
+    return states[place.id];
+  }
+  function saveState(place) {
+    try { localStorage.setItem(STORE + place.id, serialize(place, states[place.id])); } catch (e) { /* ignore */ }
   }
 
-  function updateReadout() {
-    el("r-tile").textContent = product.colors.filter(function (t) { return state.tiles.indexOf(t.id) >= 0; })
-      .map(function (t) { return t.name; }).join(", ");
-    el("r-grout").textContent = state.groutName + " " + state.grout.toUpperCase();
-    el("r-chip").style.background = state.grout;
-    el("r-joint").textContent = state.joint + " mm";
-    el("r-wall").textContent = state.wall + " cm";
-    el("jointOut").textContent = state.joint + " mm";
-    el("wallOut").textContent = state.wall + " cm";
-    el("customHex").textContent = state.grout;
-  }
-
-  function render() { updateReadout(); writeUrl(); draw(); }
-
-  /* ---------- URL serialisation ----------
-   * #<selection>?t=rosso,verde&m=random&g=cdbfa6&l=drop&a=0&j=3&w=90
-   * Every option is written so a shared link stays stable even if defaults change.
+  /* ---------- routing ----------
+   *   #/                         overview (current picks)
+   *   #/?foyer=<enc>&island-front=<enc>   overview of shared picks
+   *   #/<place>?<options>        one place
+   *   #<place>?<options>         older links, still accepted
    */
-  function serialize() {
-    var p = [
-      "t=" + state.tiles.join(","),
-      "m=" + state.mix,
-      "g=" + state.grout.replace("#", "").toLowerCase(),
-      "l=" + state.layout,
-      "a=" + state.angle,
-      "j=" + state.joint,
-      "w=" + state.wall
-    ];
-    return selection.id + "?" + p.join("&");
-  }
-  function parseHash() {
-    var h = decodeURIComponent(location.hash.replace(/^#/, ""));
+  function parseRoute() {
+    var h = location.hash.replace(/^#\/?/, "");
     var q = h.indexOf("?");
-    var id = q < 0 ? h : h.slice(0, q);
-    var params = {};
-    if (q >= 0) h.slice(q + 1).split("&").forEach(function (kv) {
-      var k = kv.indexOf("=");
-      if (k > 0) params[kv.slice(0, k)] = kv.slice(k + 1);
+    return { path: q < 0 ? h : h.slice(0, q), query: q < 0 ? "" : h.slice(q + 1) };
+  }
+  function placeHash(place, st) { return "#/" + place.id + "?" + serialize(place, st); }
+  function writeUrl(next) {
+    if (location.hash !== next && history.replaceState) history.replaceState(null, "", next);
+  }
+
+  var current = null;   // the place being edited, or null on the overview
+  var indexStates = {}; // what the overview is showing
+
+  function route() {
+    var r = parseRoute();
+    var place = byId(TV.PLACES, r.path);
+    if (place) {
+      if (r.query) { states[place.id] = stateFromQuery(place, r.query); saveState(place); }
+      showPlace(place);
+    } else {
+      showIndex(r.query ? parseQuery(r.query) : null);
+    }
+  }
+
+  /* ---------- tabs ---------- */
+  var tabs = el("tabs");
+  function buildTabs() {
+    var items = [{ id: "", name: "Overview" }].concat(TV.PLACES);
+    items.forEach(function (it) {
+      var a = document.createElement("a");
+      a.href = "#/" + it.id;
+      a.textContent = it.name;
+      a.dataset.id = it.id;
+      tabs.appendChild(a);
     });
-    return { id: id, params: params };
   }
-  function shareUrl() {
-    return location.href.split("#")[0] + "#" + serialize();
+  function syncTabs() {
+    var id = current ? current.id : "";
+    Array.prototype.forEach.call(tabs.children, function (a) {
+      if (a.dataset.id === id) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    });
   }
-  function writeUrl() {
-    if (!selection || !history.replaceState) return;
-    var next = "#" + serialize();
-    if (location.hash !== next) history.replaceState(null, "", next);
+
+  /* ---------- overview ---------- */
+  var cardsWrap = el("cards");
+
+  function showIndex(shared) {
+    current = null;
+    TV.PLACES.forEach(function (p) {
+      indexStates[p.id] = shared && shared[p.id] ? stateFromQuery(p, shared[p.id]) : getState(p);
+    });
+    el("indexView").hidden = false;
+    el("placeView").hidden = true;
+    document.title = "Tile Visualizer";
+    syncTabs();
+    buildCards();
+    writeUrl("#/?" + TV.PLACES.map(function (p) {
+      return p.id + "=" + encodeURIComponent(serialize(p, indexStates[p.id]));
+    }).join("&"));
   }
-  function inRange(v, lo, hi) { return isFinite(v) && v >= lo && v <= hi; }
-  function applyParams(p, layouts) {
-    if (p.t) {
-      var t = p.t.split(",").filter(function (tid, i, arr) {
-        return arr.indexOf(tid) === i && product.colors.some(function (c) { return c.id === tid; });
+
+  function buildCards() {
+    cardsWrap.innerHTML = "";
+    TV.PLACES.forEach(function (place) {
+      var product = productOf(place), st = indexStates[place.id];
+      var a = document.createElement("a");
+      a.className = "card";
+      a.href = placeHash(place, st);
+
+      var pv = document.createElement("div");
+      pv.className = "pv";
+      var cv = document.createElement("canvas");
+      cv.setAttribute("role", "img");
+      cv.setAttribute("aria-label", place.name + " preview");
+      pv.appendChild(cv);
+      a.appendChild(pv);
+
+      var body = document.createElement("div");
+      body.className = "body";
+      var h = document.createElement("h2");
+      h.textContent = place.name;
+      var pr = document.createElement("p");
+      pr.className = "prod";
+      pr.textContent = product.brand + " " + product.name;
+      var dl = document.createElement("dl");
+      kindOf(place).facts(product, st).forEach(function (f) {
+        var dt = document.createElement("dt"), dd = document.createElement("dd");
+        dt.textContent = f[0];
+        if (f[2]) dd.appendChild(chip(f[2]));
+        dd.appendChild(document.createTextNode(f[1]));
+        dl.appendChild(dt); dl.appendChild(dd);
       });
-      if (t.length) state.tiles = t;
-    }
-    if (MIXES.some(function (m) { return m.id === p.m; })) state.mix = p.m;
-    if (/^[0-9a-f]{6}$/i.test(p.g || "")) {
-      state.grout = "#" + p.g.toLowerCase();
-      var named = TV.GROUTS.filter(function (gr) { return gr.c.toLowerCase() === state.grout; })[0];
-      state.groutName = named ? named.name : "Custom";
-    }
-    if (layouts.some(function (l) { return l.id === p.l; })) state.layout = p.l;
-    var a = parseFloat(p.a);
-    if (ANGLES.some(function (x) { return x.id === a; })) state.angle = a;
-    var j = parseFloat(p.j);
-    if (inRange(j, 1, 8)) state.joint = Math.round(j * 2) / 2;
-    var w = parseFloat(p.w);
-    if (inRange(w, 40, 200)) state.wall = Math.round(w / 5) * 5;
+      var open = document.createElement("span");
+      open.className = "open";
+      open.textContent = "Open " + place.name.toLowerCase() + " →";
+      body.appendChild(h); body.appendChild(pr); body.appendChild(dl); body.appendChild(open);
+      a.appendChild(body);
+      cardsWrap.appendChild(a);
+    });
+    drawCards();
   }
-
-  /* ---------- share ---------- */
-  var shareTimer;
-  function flashShare(msg) {
-    var b = el("share");
-    b.textContent = msg;
-    clearTimeout(shareTimer);
-    shareTimer = setTimeout(function () { b.textContent = "Share"; }, 1800);
-  }
-  function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
-    return new Promise(function (resolve, reject) {
-      var ta = document.createElement("textarea");
-      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy") ? resolve() : reject(); } catch (e) { reject(e); }
-      document.body.removeChild(ta);
+  function drawCards() {
+    Array.prototype.forEach.call(cardsWrap.querySelectorAll("canvas"), function (cv, k) {
+      var place = TV.PLACES[k];
+      TV.draw(cv, productOf(place), indexStates[place.id]);
     });
   }
-  el("share").addEventListener("click", function () {
-    var url = shareUrl();
-    if (navigator.share && matchMedia("(pointer: coarse)").matches) {
-      navigator.share({ title: document.title, url: url }).catch(function () {});
-      return;
-    }
-    copyText(url).then(function () { flashShare("Link copied"); },
-      function () { window.prompt("Copy this link:", url); });
-  });
 
-  /* ---------- controls ---------- */
-  function seg(id, items, key, onPick) {
-    var wrap = el(id);
-    wrap.innerHTML = "";
+  function chip(color) {
+    var i = document.createElement("i");
+    i.className = "chip";
+    i.style.background = color;
+    return i;
+  }
+
+  /* ---------- one place ---------- */
+  var product, state;
+  var cv = el("cv"), wrap = el("canvasWrap");
+
+  function showPlace(place) {
+    current = place;
+    product = productOf(place);
+    state = getState(place);
+    el("indexView").hidden = true;
+    el("placeView").hidden = false;
+    el("title").textContent = place.name;
+    el("subtitle").textContent = product.brand + " " + product.name +
+      (product.credit ? " · " + product.credit : "") + (product.material ? ". " + product.material + "." : "");
+    el("productNote").textContent = product.note || "";
+    document.title = place.name + " · Tile Visualizer";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-kind]"), function (n) {
+      n.hidden = n.dataset.kind !== product.kind;
+    });
+    wrap.classList.toggle("fit", product.kind === "decor");
+    syncTabs();
+    if (product.kind === "strip") buildStrip(); else buildDecor();
+    syncShared();
+    render();
+  }
+
+  function update() {
+    saveState(current);
+    render();
+  }
+
+  function render() {
+    if (!current) return;
+    sizeStage();
+    TV.draw(cv, product, state);
+    var r = el("readout");
+    r.innerHTML = "";
+    kindOf(current).facts(product, state).forEach(function (f) {
+      var s = document.createElement("span"), b = document.createElement("b");
+      s.appendChild(document.createTextNode(f[0] + " "));
+      if (f[2]) b.appendChild(chip(f[2]));
+      b.appendChild(document.createTextNode(f[1]));
+      s.appendChild(b);
+      r.appendChild(s);
+    });
+    el("jointOut").textContent = state.joint + " mm";
+    el("customHex").textContent = state.grout;
+    if (product.kind === "strip") el("wallOut").textContent = state.wall + " cm";
+    writeUrl(placeHash(current, state));
+  }
+
+  /* Decor surfaces are drawn whole, so the canvas takes the surface's proportions. */
+  function sizeStage() {
+    if (product.kind !== "decor") { cv.style.width = ""; cv.style.height = ""; return; }
+    var cs = getComputedStyle(wrap);
+    var avail = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var maxH = Math.min(560, window.innerHeight * 0.6);
+    var h = avail * state.h / state.w, w = avail;
+    if (h > maxH) { h = maxH; w = h * state.w / state.h; }
+    cv.style.width = Math.round(w) + "px";
+    cv.style.height = Math.round(h) + "px";
+  }
+
+  /* Segmented control. Returns a sync function. */
+  function seg(id, items, key) {
+    var box = el(id);
+    box.innerHTML = "";
     items.forEach(function (it) {
       var b = document.createElement("button");
       b.type = "button";
       b.textContent = it.name;
-      b.addEventListener("click", function () {
-        if (onPick) return onPick(it);
-        state[key] = it.id; sync(); render();
-      });
-      wrap.appendChild(b);
+      b.addEventListener("click", function () { state[key] = it.id; sync(); onSegChange(); update(); });
+      box.appendChild(b);
     });
     function sync() {
-      Array.prototype.forEach.call(wrap.children, function (b, k) {
-        var cur = onPick ? (selection && selection.id) : state[key];
-        b.setAttribute("aria-pressed", String(items[k].id === cur));
+      Array.prototype.forEach.call(box.children, function (b, k) {
+        b.setAttribute("aria-pressed", String(items[k].id === state[key]));
       });
     }
     sync();
     return sync;
   }
+  function onSegChange() {
+    if (product.kind === "decor") el("swapRow").hidden = state.pattern === "dash" || state.pattern === "dot";
+  }
 
-  /* Grout swatches (shared across selections) */
+  /* Shared: grout, joint */
   var swWrap = el("swatches");
   TV.GROUTS.forEach(function (gr) {
     var b = document.createElement("button");
     b.type = "button";
     b.className = "sw";
     b.dataset.c = gr.c;
-    b.dataset.name = gr.name;
-    b.innerHTML = '<span class="dot" style="background:' + gr.c + '"></span><span class="nm">' + escapeHtml(gr.name) + "</span>";
-    b.addEventListener("click", function () {
-      state.grout = gr.c; state.groutName = gr.name;
-      el("custom").value = gr.c;
-      syncSwatches(); render();
-    });
+    var dot = document.createElement("span"), nm = document.createElement("span");
+    dot.className = "dot"; dot.style.background = gr.c;
+    nm.className = "nm"; nm.textContent = gr.name;
+    b.appendChild(dot); b.appendChild(nm);
+    b.addEventListener("click", function () { state.grout = gr.c; syncShared(); update(); });
     swWrap.appendChild(b);
   });
-  function syncSwatches() {
+  function syncShared() {
     Array.prototype.forEach.call(swWrap.children, function (b) {
-      b.setAttribute("aria-pressed", String(b.dataset.c === state.grout && b.dataset.name === state.groutName));
+      b.setAttribute("aria-pressed", String(b.dataset.c === state.grout));
     });
+    el("custom").value = state.grout;
+    el("joint").value = state.joint;
   }
-  el("custom").addEventListener("input", function (e) {
-    state.grout = e.target.value; state.groutName = "Custom";
-    syncSwatches(); render();
-  });
+  el("custom").addEventListener("input", function (e) { state.grout = e.target.value.toLowerCase(); syncShared(); update(); });
+  el("joint").addEventListener("input", function (e) { state.joint = parseFloat(e.target.value); update(); });
 
-  /* Tile colour swatches (per product) */
+  /* Strip controls */
   var tsw = el("tileSw");
-  function buildTiles() {
+  function buildStrip() {
     tsw.innerHTML = "";
     product.colors.forEach(function (t) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "sw";
       b.dataset.id = t.id;
-      b.innerHTML = '<span class="dot" style="background:' + t.color + '"></span><span class="nm">' + escapeHtml(t.name) + "</span>";
+      var dot = document.createElement("span"), nm = document.createElement("span");
+      dot.className = "dot"; dot.style.background = t.color;
+      nm.className = "nm"; nm.textContent = t.name;
+      b.appendChild(dot); b.appendChild(nm);
       b.addEventListener("click", function () {
         var k = state.tiles.indexOf(t.id);
         if (k >= 0) { if (state.tiles.length > 1) state.tiles.splice(k, 1); }
         else state.tiles.push(t.id);
-        syncTiles(); render();
+        syncTiles(); update();
       });
       tsw.appendChild(b);
     });
@@ -295,6 +423,11 @@
     el("allTiles").hidden = !many;
     el("allTiles").textContent = "Select all " + product.colors.length;
     el("mixField").hidden = !many;
+    syncTiles();
+    seg("mixSeg", MIXES, "mix");
+    seg("layoutSeg", layoutsFor(product), "layout");
+    seg("angleSeg", ANGLES, "angle");
+    el("wall").value = state.wall;
   }
   function syncTiles() {
     Array.prototype.forEach.call(tsw.children, function (b) {
@@ -303,62 +436,104 @@
   }
   el("allTiles").addEventListener("click", function () {
     state.tiles = product.colors.map(function (t) { return t.id; });
-    syncTiles(); render();
+    syncTiles(); update();
+  });
+  el("wall").addEventListener("input", function (e) { state.wall = parseFloat(e.target.value); update(); });
+
+  /* Decor controls */
+  var csw = el("colorSw");
+  function buildDecor() {
+    csw.innerHTML = "";
+    product.colors.forEach(function (c) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "sw";
+      b.dataset.id = c.id;
+      b.setAttribute("aria-label", c.name + " (Dash and Dot)");
+      var swc = document.createElement("canvas"), nm = document.createElement("span");
+      nm.className = "nm"; nm.textContent = c.name;
+      b.appendChild(swc); b.appendChild(nm);
+      b.addEventListener("click", function () { state.color = c.id; syncColors(); update(); });
+      csw.appendChild(b);
+    });
+    syncColors();
+    drawSwatches();
+    seg("patternSeg", PATTERNS, "pattern");
+    onSegChange();
+    el("dimW").value = state.w;
+    el("dimH").value = state.h;
+  }
+  function drawSwatches() {
+    Array.prototype.forEach.call(csw.querySelectorAll("canvas"), function (c, k) {
+      TV.drawDecorSwatch(c, product, product.colors[k]);
+    });
+  }
+  function syncColors() {
+    Array.prototype.forEach.call(csw.children, function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.id === state.color));
+    });
+  }
+  el("swap").addEventListener("click", function () { state.swap = !state.swap; update(); });
+  function dimInput(id, key, lo, hi) {
+    var inp = el(id);
+    inp.addEventListener("input", function () {
+      var v = parseFloat(inp.value);
+      if (inRange(v, lo, hi)) { state[key] = Math.round(v); update(); }
+    });
+    inp.addEventListener("change", function () { inp.value = state[key]; });
+  }
+  dimInput("dimW", "w", 15, 600);
+  dimInput("dimH", "h", 15, 300);
+
+  /* Reset */
+  el("reset").addEventListener("click", function () {
+    states[current.id] = defaultsFor(current);
+    saveState(current);
+    showPlace(current);
   });
 
-  el("joint").addEventListener("input", function (e) { state.joint = parseFloat(e.target.value); render(); });
-  el("wall").addEventListener("input", function (e) { state.wall = parseFloat(e.target.value); render(); });
-
-  /* ---------- selections ---------- */
-  var syncSelection;
-
-  function applySelection(id, params) {
-    selection = TV.SELECTIONS.filter(function (s) { return s.id === id; })[0] || TV.SELECTIONS[0];
-    product = TV.PRODUCTS[selection.product];
-
-    state = assign({}, BASE_DEFAULTS, selection.defaults);
-    state.tiles = (state.tiles || []).filter(function (tid) {
-      return product.colors.some(function (c) { return c.id === tid; });
+  /* ---------- share ---------- */
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { if (document.execCommand("copy")) resolve(); else reject(); } catch (e) { reject(e); }
+      document.body.removeChild(ta);
     });
-    if (!state.tiles.length) state.tiles = [product.colors[0].id];
-
-    var layouts = (product.layouts || ["straight"]).map(function (k) { return ALL_LAYOUTS[k]; }).filter(Boolean);
-    if (!layouts.some(function (l) { return l.id === state.layout; })) state.layout = layouts[0].id;
-    if (params) applyParams(params, layouts);
-
-    el("title").textContent = selection.name + " · " + product.brand + " " + product.name;
-    el("subtitle").textContent = [product.name + (product.credit ? ", " + product.credit : ""), product.material]
-      .filter(Boolean).join(". ") + ".";
-    el("productNote").textContent = product.note || "";
-    document.title = selection.name + " · " + product.name + " Tile Visualizer";
-
-    el("custom").value = state.grout;
-    el("joint").value = state.joint;
-    el("wall").value = state.wall;
-
-    buildTiles();
-    syncTiles();
-    syncSwatches();
-    seg("mixSeg", MIXES, "mix");
-    seg("layoutSeg", layouts, "layout");
-    seg("angleSeg", ANGLES, "angle");
-    if (syncSelection) syncSelection();
-    render();
   }
-
-  function applyFromHash() {
-    var h = parseHash();
-    applySelection(h.id, h.params);
+  function shareButton(id) {
+    var b = el(id), timer;
+    b.addEventListener("click", function () {
+      var url = location.href;
+      if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+        navigator.share({ title: document.title, url: url }).catch(function () {});
+        return;
+      }
+      copyText(url).then(function () {
+        b.textContent = "Link copied";
+        clearTimeout(timer);
+        timer = setTimeout(function () { b.textContent = "Share"; }, 1800);
+      }, function () { window.prompt("Copy this link:", url); });
+    });
   }
-  // Switching selection starts from that selection's defaults.
-  syncSelection = seg("selectionSeg", TV.SELECTIONS, null, function (it) { applySelection(it.id); });
-  // Pasting / editing a link in the address bar re-applies it.
-  window.addEventListener("hashchange", applyFromHash);
+  shareButton("share");
+  shareButton("shareIndex");
 
+  /* ---------- boot ---------- */
   var raf;
-  function scheduleDraw() { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }
-  window.addEventListener("resize", scheduleDraw);
-  if (window.ResizeObserver) new ResizeObserver(scheduleDraw).observe(cv);
+  function redraw() {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(function () {
+      if (current) { render(); if (product.kind === "decor") drawSwatches(); }
+      else drawCards();
+    });
+  }
+  window.addEventListener("resize", redraw);
+  if (window.ResizeObserver) new ResizeObserver(redraw).observe(document.querySelector(".wrap"));
+  window.addEventListener("hashchange", route);
 
-  applyFromHash();
+  buildTabs();
+  route();
 })();
